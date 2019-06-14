@@ -5,10 +5,10 @@ import readline
 TF = ("true", "false")
 KB = 1024
 
-TYPE_INPUT = "input"
+TYPE_INPUT = "simple"
 TYPE_CALC = "calc"
-TYPE_REFERENCE = "reference(default)"
-TYPE_THRESHOLD = "threshold"
+TYPE_REFERENCE = "extended"
+# TYPE_THRESHOLD = "threshold"
 
 # Yarn Sizing
 YARN_MEMORY_PERCENT = 80
@@ -218,12 +218,11 @@ AMBARI_CONFIGS = [
     LLAP_PREWARM_NUM_CONTAINERS
 ]
 
-SELECT_TASK = "-- Select Task -- : "
-SELECT_SECTION = "-- Select Section -- : "
-SELECT_ACTION = "-- Select Action --: "
-SELECT_CONFIG = "-- Select Config(enter for previous menu) -- : "
-NEW_VALUE_INPUT = "-- New Value? -- : "
-GO_BACK = "\n*** previous menu ***\n"
+SELECT_TASK = "Select Task -- : "
+SELECT_SECTION = "Select Section -- : "
+SELECT_ACTION = "Select Action --: "
+SELECT_CONFIG = "Select Config -- : "
+ENTER_RETURN = " enter - Go back"
 AMBARI_CFG_CMD = "./configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} --cluster=${{CLUSTER_NAME}}" + \
                     " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={0}" + \
                     " --key={1} --value={2}"
@@ -312,24 +311,6 @@ def set_value(selection, lst):
     current[2] = new_value
 
 
-# def input_loop():
-#     for element in ENV_SET:
-#         # print (element[0])
-#         print ("{0}: {1} \t{2}".format(element[0], element[1], element[2]))
-#
-#     selection = raw_input("Select property: ")
-#
-#     # current = get_current(selection, ENV_SET)
-#
-#     set_value(selection, ENV_SET)
-#
-#     print ENV_SET
-#     # line = ''
-#     # while line != 'stop':
-#     #     line = raw_input('...')
-#     #     print 'Dispatch \t\t%s' % line
-
-
 def convert(value, original):
     if isinstance(original, int):
         return int(value)
@@ -356,7 +337,7 @@ def sections_loop():
         # print ("sections")
         inc = 1
         for section in filtered_sections():
-            print ("({0})\t{1}".format(inc, section[0]))
+            print (" {0} - {1}".format(inc, section[0]))
             inc += 1
 
         # Select Section
@@ -409,12 +390,17 @@ def section_loop(selection):
 def select_config(section, section_configs):
     # List Filtered Sections
     # print ("select")
-    print (section[0])
+    print (chr(27) + "[2J")
+    print ("===================================")
+    print ("   " + section[0])
+    print ("===================================")
     inc = 1
     for config in section_configs:
-        print ("\t({0})\t[{1}]\t{2}".format(inc, config[POS_VALUE], config[POS_SHORT_DESC]))
+        print (" {0} - {1}: [{2}]".format(inc, config[POS_SHORT_DESC], config[POS_VALUE]))
         inc += 1
 
+    print (ENTER_RETURN)
+    print ("===================================")
     # Pick Config to Edit
     try:
         choice = int(raw_input(SELECT_CONFIG))
@@ -440,12 +426,13 @@ def change_config(config):
     # print ("change")
 
     try:
-        raw_value = raw_input("{0} \"{1}\" [{2}]: ".format(config[POS_SHORT_DESC], config[POS_CONFIG], config[POS_VALUE]))
+        raw_value = raw_input(">>> {0} \"{1}\" [{2}]: ".format(config[POS_SHORT_DESC], config[POS_CONFIG], config[POS_VALUE]))
+
         if raw_value == "":
             return True
         new_value = convert(raw_value, config[POS_VALUE])
     except:
-        print ("Error Setting Value, try again. Most likely a bad conversion.")
+        # print ("Error Setting Value, try again. Most likely a bad conversion.")
         return False
 
     config[POS_VALUE] = new_value
@@ -455,13 +442,16 @@ def change_config(config):
 
 def guided_loop():
     # Find configs in Section that are "TYPE_INPUT"
-    print ("********************************")
+    print(chr(27) + "[2J")
+    print ("===================================")
     print ("      Guided Configuration      ")
     print ("")
-    print ("Enter value for each setting.")
-    print ("Press 'enter' to keep current.")
+    print ("- Enter value for each setting.")
+    print ("- Press 'enter' to keep current.")
     print ("")
-    print ("********************************")
+    print ("                    * current mode * ")
+    print ("                     " + str(MODE))
+    print ("===================================")
 
     guided_configs = []
     for config in LOGICAL_CONFIGS:
@@ -477,14 +467,41 @@ def guided_loop():
 
 def edit_loop():
     while True:
-        print ("********************************")
-        print ("      Edit Configurations     ")
-        print ("********************************")
+        print(chr(27) + "[2J")
+        print ("===================================")
+        print ("        Edit Configurations        ")
+        print ("                    * current mode * ")
+        print ("                     " + str(MODE))
+        print ("===================================")
 
-        if not sections_loop():
+        # List Sections
+        # print ("sections")
+        inc = 1
+        for section in filtered_sections():
+            print (" {0} - {1}".format(inc, section[0]))
+            inc += 1
+
+        print (ENTER_RETURN)
+        print ("===================================")
+        # Select Section
+        try:
+            raw_selection = raw_input(SELECT_SECTION)
+            if raw_selection == "":
+                break
+            selection = int(raw_selection)
+        except ValueError:
+            # print (GO_BACK)
+            return
+
+        # Check selection boundaries
+        if selection > len(filtered_sections()) or selection < 1:
+            # print (GO_BACK)
+            return
+
+        if not section_loop(selection):
             break
 
-        print ("********************************")
+        print ("===================================")
 
 
 def logical_display():
@@ -492,14 +509,15 @@ def logical_display():
 
     pprinttable(LOGICAL_CONFIGS, [0, 1, 2, 3, 4])
 
-    print ("________________________________")
     print ("")
+    raw_input("press enter...")
 
 def ambari_configs():
     run_calc()
-    print ("********************************")
-    print ("      Ambari Configurations     ")
-    print ("********************************")
+    print(chr(27) + "[2J")
+    print ("===================================")
+    print ("       Ambari Configurations       ")
+    print ("===================================")
 
     pprinttable(AMBARI_CONFIGS, [0, 1, 2, 3, 4])
 
@@ -518,8 +536,8 @@ def ambari_configs():
     for cfg in manual:
         print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC], cfg[POS_VALUE]))
 
-    print ("________________________________")
     print ("")
+    raw_input("press enter...")
 
 
 def report():
@@ -531,21 +549,28 @@ def save():
 
 
 def change_mode():
+    print(chr(27) + "[2J")
     print ("===================================")
-    print ("       Edit Mode       ")
+    print ("            Change Mode       ")
+    print ("                    * current mode *")
+    print ("                     " + str(MODE))
     print ("===================================")
-    print ("\t(1)\tSimple Mode")
-    print ("\t(2)\tReference Mode(expose additional settings)")
+    print (" 1 - Simple Mode")
+    print (" 2 - Reference Mode(expose additional settings)")
+    print (ENTER_RETURN)
+    print ("===================================")
 
     selection = raw_input("-- Select Mode -- : ")
 
-    if selection in ("1", "2"):
+    if selection is not None and selection in ("1", "2"):
         if selection == "1":
             MODE.remove(TYPE_REFERENCE)
         else:
             MODE.append(TYPE_REFERENCE)
+    elif selection is None:
+        return
     else:
-        print ("Invalid Mode. Current Mode: " + MODE)
+        print ("Invalid Mode. Current Mode: " + str(MODE))
 
     print ("________________________________")
     print ("")
@@ -554,19 +579,25 @@ def change_mode():
 def action_loop():
     actions = (
         ("Guided Config", "g"), (), ("Logical Display", "l"), ("Ambari Config List", "a"), (), ("Edit", "e"),
-        ("Save", "s"), (), ("Mode (expose additional settings)", "m"), (), ("Quit", "q"))
+        # ("Save", "s"),
+        (), ("Mode (expose additional settings)", "m"), (), ("Quit", "q"))
 
     def validate(choice):
         for action in actions:
             if len(action) > 1 and choice == action[1]:
                 return True
+    print(chr(27) + "[2J")
     print ("===================================")
-    print ("======== MAIN Action Menu =========")
+    print ("         MAIN Action Menu          ")
+    print ("                    * current mode *")
+    print ("                     " + str(MODE))
+    print ("===================================")
     for action in actions:
         if len(action)>1:
-            print ("({1})\t{0}".format(action[0], action[1]))
+            print (" {1} - {0}".format(action[0], action[1]))
         else:
-            print ("--------------------")
+            print ("       -----------")
+    print ("===================================")
 
     selection = raw_input(SELECT_ACTION)
 
