@@ -39,6 +39,8 @@ HOST_ENV = ("Cluster Host Configuration", "host-env")
 THRESHOLD_ENV = ("Calculation Thresholds", "threshold-env")
 CLUSTER_ENV = ("Cluster Environment", "cluster-env")
 
+VALID_AMBARI_SECTIONS = (YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTERACTIVE_ENV, TEZ_INTERACTIVE_SITE)
+
 SECTIONS = (HOST_ENV, THRESHOLD_ENV, YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTERACTIVE_ENV, TEZ_INTERACTIVE_SITE)
 
 # Environment
@@ -128,65 +130,103 @@ TOTAL_LLAP_MEM_FOOTPRINT = ["Total LLAP Memory Footprint", TYPE_CALC, CLUSTER_EN
 LLAP_QUEUE_MIN_REQUIREMENT = ["LLAP Minimum YARN Queue Capacity % Requirement", TYPE_CALC, CLUSTER_ENV,
                               "", 0, (), ""]
 
+LOGICAL_CONFIGS = [
+    WORKER_MEMORY_GB,
+    WORKER_COUNT,
+    WORKER_CORES,
 
-CONFIGS = [WORKER_MEMORY_GB,
-           WORKER_COUNT,
-           WORKER_CORES,
+    PERCENT_OF_HOST_MEM_FOR_YARN,
+    PERCENT_OF_CLUSTER_FOR_LLAP,
+    PERCENT_OF_NODE_FOR_LLAP_MEM,
+    PERCENT_OF_LLAP_FOR_CACHE,
+    PERCENT_OF_CORES_FOR_EXECUTORS,
+    PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
+    PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL,
+    THRESHOLD_MAX_HEADROOM_GB,
 
-           PERCENT_OF_HOST_MEM_FOR_YARN,
-           PERCENT_OF_CLUSTER_FOR_LLAP,
-           PERCENT_OF_NODE_FOR_LLAP_MEM,
-           PERCENT_OF_LLAP_FOR_CACHE,
-           PERCENT_OF_CORES_FOR_EXECUTORS,
-           PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
-           PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL,
-           THRESHOLD_MAX_HEADROOM_GB,
+    YARN_NM_RSRC_MEM_MB,
+    TOTAL_MEM_FOOTPRINT,
+    YARN_SCH_MAX_ALLOC_MEM_MB,
+    HIVE_LLAP_QUEUE,
 
-           YARN_NM_RSRC_MEM_MB,
-           TOTAL_MEM_FOOTPRINT,
-           YARN_SCH_MAX_ALLOC_MEM_MB,
-           HIVE_LLAP_QUEUE,
+    LLAP_NUM_NODES,
 
-           LLAP_NUM_NODES,
+    LLAP_CONCURRENCY,
+    TEZ_AM_MEM_MB,
 
-           LLAP_CONCURRENCY,
-           TEZ_AM_MEM_MB,
+    LLAP_NUM_EXECUTORS_PER_DAEMON,
 
-           LLAP_NUM_EXECUTORS_PER_DAEMON,
+    LLAP_AM_DAEMON_HEAP_MB,
+    LLAP_DAEMON_CONTAINER_MEM_MB,
+    LLAP_DAEMON_HEAP_MEM_MB,
+    LLAP_HEADROOM_MEM_MB,
+    LLAP_CACHE_MEM_MB,
 
-           LLAP_AM_DAEMON_HEAP_MB,
-           LLAP_DAEMON_CONTAINER_MEM_MB,
-           LLAP_DAEMON_HEAP_MEM_MB,
-           LLAP_HEADROOM_MEM_MB,
-           LLAP_CACHE_MEM_MB,
+    TOTAL_LLAP_DAEMON_FOOTPRINT,
 
-           TOTAL_LLAP_DAEMON_FOOTPRINT,
+    TOTAL_LLAP_OTHER_FOOTPRINT,
 
+    LLAP_MEMORY_MODE,
+    LLAP_IO_ENABLED,
+    LLAP_OBJECT_CACHE_ENABLED,
 
-           TOTAL_LLAP_OTHER_FOOTPRINT,
+    LLAP_IO_THREADPOOL,
 
-           LLAP_MEMORY_MODE,
-           LLAP_IO_ENABLED,
-           LLAP_OBJECT_CACHE_ENABLED,
+    LLAP_IO_ALLOCATOR_NMAP_ENABLED,
+    LLAP_IO_ALLOCATOR_NMAP_PATH,
 
-           LLAP_IO_THREADPOOL,
+    TEZ_CONTAINER_SIZE_MB,
 
-           LLAP_IO_ALLOCATOR_NMAP_ENABLED,
-           LLAP_IO_ALLOCATOR_NMAP_PATH,
+    LLAP_PREWARMED_ENABLED,
+    LLAP_PREWARM_NUM_CONTAINERS,
 
-           TEZ_CONTAINER_SIZE_MB,
+    TOTAL_LLAP_MEM_FOOTPRINT,
+    LLAP_QUEUE_MIN_REQUIREMENT]
 
-           LLAP_PREWARMED_ENABLED,
-           LLAP_PREWARM_NUM_CONTAINERS,
+AMBARI_CONFIGS = [
+    YARN_NM_RSRC_MEM_MB,
 
-           TOTAL_LLAP_MEM_FOOTPRINT,
-           LLAP_QUEUE_MIN_REQUIREMENT]
+    YARN_SCH_MAX_ALLOC_MEM_MB,
+    HIVE_LLAP_QUEUE,
+    LLAP_QUEUE_MIN_REQUIREMENT,
 
-SELECT_TASK = "\t-- Select Task -- : "
-SELECT_SECTION = "\t-- Select Section -- : "
-SELECT_CONFIG = "\t-- Select Config(enter for previous menu) -- : "
-NEW_VALUE_INPUT = "\t-- New Value? -- : "
-GO_BACK = "\n.. previous menu ..\n"
+    LLAP_NUM_NODES,
+
+    LLAP_CONCURRENCY,
+    TEZ_AM_MEM_MB,
+
+    LLAP_NUM_EXECUTORS_PER_DAEMON,
+
+    LLAP_AM_DAEMON_HEAP_MB,
+    LLAP_DAEMON_CONTAINER_MEM_MB,
+    LLAP_DAEMON_HEAP_MEM_MB,
+    LLAP_HEADROOM_MEM_MB,
+    LLAP_CACHE_MEM_MB,
+
+    LLAP_MEMORY_MODE,
+    LLAP_IO_ENABLED,
+    LLAP_OBJECT_CACHE_ENABLED,
+
+    LLAP_IO_THREADPOOL,
+
+    LLAP_IO_ALLOCATOR_NMAP_ENABLED,
+    LLAP_IO_ALLOCATOR_NMAP_PATH,
+
+    TEZ_CONTAINER_SIZE_MB,
+
+    LLAP_PREWARMED_ENABLED,
+    LLAP_PREWARM_NUM_CONTAINERS
+]
+
+SELECT_TASK = "-- Select Task -- : "
+SELECT_SECTION = "-- Select Section -- : "
+SELECT_ACTION = "-- Select Action --: "
+SELECT_CONFIG = "-- Select Config(enter for previous menu) -- : "
+NEW_VALUE_INPUT = "-- New Value? -- : "
+GO_BACK = "\n*** previous menu ***\n"
+AMBARI_CFG_CMD = "./configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} --cluster=${{CLUSTER_NAME}}" + \
+                    " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={0}" + \
+                    " --key={1} --value={2}"
 
 MODE = [TYPE_INPUT]
 
@@ -237,11 +277,11 @@ def run_calc():
     # LLAP_IO_THREADPOOL
     LLAP_IO_THREADPOOL[POS_VALUE] = LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE] * \
                                     PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL[POS_VALUE] / 100
-    
+
     # Total LLAP Daemon Footprint
     TOTAL_LLAP_DAEMON_FOOTPRINT[POS_VALUE] = LLAP_NUM_NODES[POS_VALUE] * LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] \
                                              + LLAP_AM_DAEMON_HEAP_MB[POS_VALUE]
-    
+
     # Total LLAP Other Footprint
     # =IF(E30, IF(E32>0, (E29*E32*E34)+(E29*E33),(E29*E31*E34)+(E29*E33)),E29*E33)
     # TODO: Add support for PREWARMED CONTAINERS.
@@ -249,14 +289,15 @@ def run_calc():
 
     # Total LLAP Memory Footprint
     TOTAL_LLAP_MEM_FOOTPRINT[POS_VALUE] = TOTAL_LLAP_DAEMON_FOOTPRINT[POS_VALUE] + TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE]
-    
+
     # Total Cluster Memory Footprint
     TOTAL_MEM_FOOTPRINT[POS_VALUE] = YARN_NM_RSRC_MEM_MB[POS_VALUE] * WORKER_COUNT[POS_VALUE]
 
     # Total LLAP Yarn Queue Requirement (Percent of Root Queue)
     LLAP_QUEUE_MIN_REQUIREMENT[POS_VALUE] = round(float(TOTAL_LLAP_MEM_FOOTPRINT[POS_VALUE]) / \
-                                            TOTAL_MEM_FOOTPRINT[POS_VALUE] * 100, 2)
-    
+                                                  TOTAL_MEM_FOOTPRINT[POS_VALUE] * 100, 2)
+
+
 def get_current(selection, lst):
     for item in lst:
         if item[0] == selection:
@@ -340,7 +381,7 @@ def section_loop(selection):
 
         # Find configs in Section that are "TYPE_INPUT"
         section_configs = []
-        for config in CONFIGS:
+        for config in LOGICAL_CONFIGS:
             if config[POS_SECTION][1] == section_choice[1] and config[POS_TYPE] in MODE:
                 section_configs.append(config)
 
@@ -355,7 +396,7 @@ def select_config(section, section_configs):
     print (section[0])
     inc = 1
     for config in section_configs:
-        print (" ({0})\t[{1}] {2}".format(inc, config[POS_VALUE], config[POS_SHORT_DESC]))
+        print ("\t\t({0})\t[{1}] {2}".format(inc, config[POS_VALUE], config[POS_SHORT_DESC]))
         inc += 1
 
     # Pick Config to Edit
@@ -396,8 +437,16 @@ def change_config(config):
 
 def guided_loop():
     # Find configs in Section that are "TYPE_INPUT"
+    print ("********************************")
+    print ("      Guided Configuration      ")
+    print ("")
+    print ("Enter value for each setting.")
+    print ("Press 'enter' to keep current.")
+    print ("")
+    print ("********************************")
+
     guided_configs = []
-    for config in CONFIGS:
+    for config in LOGICAL_CONFIGS:
         if config[POS_TYPE] in MODE:
             guided_configs.append(config)
 
@@ -405,6 +454,7 @@ def guided_loop():
         change_config(config)
 
     run_calc()
+    logical_display()
 
 
 def edit_loop():
@@ -413,11 +463,38 @@ def edit_loop():
             break
 
 
-def display():
+def logical_display():
     run_calc()
-    pprinttable(CONFIGS, [0, 1, 2, 3, 4])
 
-    print ("Display")
+    pprinttable(LOGICAL_CONFIGS, [0, 1, 2, 3, 4])
+
+    print ("Logical Display")
+
+
+def ambari_configs():
+    run_calc()
+    print ("********************************")
+    print ("      Ambari Configurations     ")
+    print ("********************************")
+
+    pprinttable(AMBARI_CONFIGS, [0, 1, 2, 3, 4])
+
+    manual = []
+    for cfg in AMBARI_CONFIGS:
+        if cfg[POS_SECTION] in VALID_AMBARI_SECTIONS:
+            print (AMBARI_CFG_CMD.format(cfg[POS_SECTION][1], cfg[POS_CONFIG], cfg[POS_VALUE]))
+        else:
+            manual.append(cfg)
+
+    if len(manual) > 0:
+        print ("===================================")
+        print ("       Manual Configurations       ")
+        print ("===================================")
+
+    for cfg in manual:
+        print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC], cfg[POS_VALUE]))
+
+    print ("________________________________")
 
 
 def report():
@@ -429,10 +506,10 @@ def save():
 
 
 def change_mode():
-    print ("\t(1)\tSimple Mode")
-    print ("\t(2)\tReference Mode")
+    print ("\t\t(1)\tSimple Mode")
+    print ("\t\t(2)\tReference Mode")
 
-    selection = raw_input("\t-- Select Mode -- : ")
+    selection = raw_input("-- Select Mode -- : ")
 
     if selection in ("1", "2"):
         if selection == "1":
@@ -444,21 +521,23 @@ def change_mode():
 
 
 def action_loop():
-    actions = (("Guided Config", "g"), ("Display", "d"), ("Edit", "e"), ("Save", "s"), ("Mode", "m"), ("Report", "r"),
-               ("Quit", "q"))
+    actions = (
+        ("Guided Config", "g"), ("Logical Display", "d"), ("Ambari Config List", "a"), ("Edit", "e"),
+        ("Save", "s"), ("Mode (expose additional settings)", "m"), ("Quit", "q"))
 
     def validate(choice):
         for action in actions:
             if choice == action[1]:
                 return True
-
+    print ("===================================")
+    print ("======== MAIN Action Menu =========")
     for action in actions:
-        print ("({1})\t{0}".format(action[0], action[1]))
+        print ("\t\t({1})\t{0}".format(action[0], action[1]))
 
-    selection = raw_input(SELECT_SECTION)
+    selection = raw_input(SELECT_ACTION)
 
     if validate(selection):
-        print("Good choice %s" % selection)
+        # print("Good choice %s" % selection)
         if selection == "q":
             return False
         elif selection == "g":
@@ -468,7 +547,10 @@ def action_loop():
             edit_loop()
             return True
         elif selection == "d":
-            display()
+            logical_display()
+            return True
+        elif selection == "a":
+            ambari_configs()
             return True
         elif selection == "s":
             save()
@@ -583,7 +665,7 @@ def main():
 
     # Setup Base defaults
     run_calc()
-    
+
     while True:
         if not action_loop():
             break
