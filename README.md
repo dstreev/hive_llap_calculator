@@ -2,6 +2,16 @@
 
 Memory / Configuration Calculator for Hive LLAP.
 
+## Assumptions
+
+- Tested on:
+    - Mac OS X iTerm and Terminal
+    - CentOS 7 bash
+- Python 2.7+
+- Calculator for Hive 3+ LLAP (HDP 3+) (May work for Hive 2 LLAP, but not tested)
+
+## Directions
+
 Run
 
 ```
