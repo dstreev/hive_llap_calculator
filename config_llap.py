@@ -56,7 +56,7 @@ PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_INPUT, THRESH
 PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90]
 PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50]
 PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80]
-THRESHOLD_MAX_HEADROOM_GB = ["MAX LLAP Headroom Value", TYPE_REFERENCE, THRESHOLD_ENV, "", 12]
+THRESHOLD_MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
                                                    TYPE_REFERENCE, THRESHOLD_ENV, "", 20]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
@@ -107,16 +107,16 @@ LLAP_NUM_NODES = ["Daemon Count", TYPE_CALC, HIVE_INTERACTIVE_ENV,
                   "num_llap_nodes_for_llap_daemons", 1, (), ""]
 LLAP_CONCURRENCY = ["Query Concurrency", TYPE_INPUT, HIVE_INTERACTIVE_ENV,
                     "hive.server2.tez.sessions.per.default.queue", 2, (), ""]
-LLAP_AM_DAEMON_HEAP_MB = ["AM Heap for Daemons", TYPE_INPUT, HIVE_INTERACTIVE_ENV,
-                          "hive_heapsize", 4096, (), ""]
+LLAP_AM_DAEMON_HEAP_MB = ["AM Heap for Daemons", TYPE_REFERENCE, HIVE_INTERACTIVE_ENV,
+                          "hive_heapsize", 4096, (), "Could be 2048, but defaults to 4096 in Ambari"]
 LLAP_HEADROOM_MEM_MB = ["Heap Headroom", TYPE_CALC, HIVE_INTERACTIVE_ENV,
                         "llap_headroom_space", 2048, (), ""]
 LLAP_DAEMON_HEAP_MEM_MB = ["Daemon Heap size(MB)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
                            "llap_heap_size", 8192, (), ""]
 
 # TEZ Interactive site
-TEZ_AM_MEM_MB = ["TEZ AM Container size(MB)", TYPE_REFERENCE, TEZ_INTERACTIVE_SITE,
-                 "tez.am.resource.memory.mb", KB * 2, (), ""]
+TEZ_AM_MEM_MB = ["TEZ AM Container size(MB) DAG Submission", TYPE_REFERENCE, TEZ_INTERACTIVE_SITE,
+                 "tez.am.resource.memory.mb", 4 * KB, (), ""]
 
 # Total Section
 TOTAL_MEM_FOOTPRINT = ["Total Memory Footprint", TYPE_CALC, CLUSTER_ENV,
@@ -266,12 +266,10 @@ def run_calc():
                                           PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[POS_VALUE] / 100
 
     # LLAP_DAEMON_HEAP_MEM_MB
-    # =(E37-E38)*(1-E16)
     LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE] = (LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] - LLAP_HEADROOM_MEM_MB[POS_VALUE]) * \
                                          (100 - PERCENT_OF_LLAP_FOR_CACHE[POS_VALUE]) / 100
 
     # LLAP_CACHE_MEM_MB
-    # =E37-E39
     LLAP_CACHE_MEM_MB[POS_VALUE] = LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] - LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE]
 
     # LLAP_IO_THREADPOOL
@@ -283,9 +281,8 @@ def run_calc():
                                              + LLAP_AM_DAEMON_HEAP_MB[POS_VALUE]
 
     # Total LLAP Other Footprint
-    # =IF(E30, IF(E32>0, (E29*E32*E34)+(E29*E33),(E29*E31*E34)+(E29*E33)),E29*E33)
     # TODO: Add support for PREWARMED CONTAINERS.
-    TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE] = LLAP_CONCURRENCY[POS_VALUE] * LLAP_AM_DAEMON_HEAP_MB[POS_VALUE]
+    TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE] = LLAP_CONCURRENCY[POS_VALUE] * TEZ_AM_MEM_MB[POS_VALUE]
 
     # Total LLAP Memory Footprint
     TOTAL_LLAP_MEM_FOOTPRINT[POS_VALUE] = TOTAL_LLAP_DAEMON_FOOTPRINT[POS_VALUE] + TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE]
@@ -342,11 +339,23 @@ def convert(value, original):
         return str(value)
 
 
+def filtered_sections():
+    f_sections = []
+    for section in SECTIONS:
+        for config in LOGICAL_CONFIGS:
+            if config[POS_SECTION] == section and config[POS_TYPE] in MODE:
+                f_sections.append(section)
+                break
+
+    return f_sections
+
+
 def sections_loop():
     while True:
         # List Sections
+        # print ("sections")
         inc = 1
-        for section in SECTIONS:
+        for section in filtered_sections():
             print ("({0})\t{1}".format(inc, section[0]))
             inc += 1
 
@@ -361,7 +370,7 @@ def sections_loop():
             return
 
         # Check selection boundaries
-        if selection > len(SECTIONS) or selection < 1:
+        if selection > len(filtered_sections()) or selection < 1:
             # print (GO_BACK)
             return
 
@@ -372,9 +381,10 @@ def sections_loop():
 def section_loop(selection):
     while True:
         # Identify Section
+        # print ("section")
         section_choice = ""
         inc = 1
-        for section in SECTIONS:
+        for section in filtered_sections():
             if selection == inc:
                 section_choice = section
             inc += 1
@@ -385,30 +395,36 @@ def section_loop(selection):
             if config[POS_SECTION][1] == section_choice[1] and config[POS_TYPE] in MODE:
                 section_configs.append(config)
 
-        if not change_config(select_config(section_choice, section_configs)):
-            break
+        config = select_config(section_choice, section_configs)
+
+        if not config:
+            return True
+
+        if not change_config(config):
+            return True
         else:
             run_calc()
 
 
 def select_config(section, section_configs):
     # List Filtered Sections
+    # print ("select")
     print (section[0])
     inc = 1
     for config in section_configs:
-        print ("\t\t({0})\t[{1}] {2}".format(inc, config[POS_VALUE], config[POS_SHORT_DESC]))
+        print ("\t({0})\t[{1}]\t{2}".format(inc, config[POS_VALUE], config[POS_SHORT_DESC]))
         inc += 1
 
     # Pick Config to Edit
     try:
         choice = int(raw_input(SELECT_CONFIG))
     except ValueError:
-        print (GO_BACK)
+        # print (GO_BACK)
         return True
 
         # Check selection boundaries
-    if choice > (inc - 1) or choice < 1:
-        print (GO_BACK)
+    if choice > (inc) or choice < 1:
+        # print (GO_BACK)
         return True
 
     # Enter New Value
@@ -421,8 +437,10 @@ def select_config(section, section_configs):
 
 
 def change_config(config):
+    # print ("change")
+
     try:
-        raw_value = raw_input("{0}({1}) [{2}]: ".format(config[POS_SHORT_DESC], config[POS_CONFIG], config[POS_VALUE]))
+        raw_value = raw_input("{0} \"{1}\" [{2}]: ".format(config[POS_SHORT_DESC], config[POS_CONFIG], config[POS_VALUE]))
         if raw_value == "":
             return True
         new_value = convert(raw_value, config[POS_VALUE])
@@ -459,8 +477,14 @@ def guided_loop():
 
 def edit_loop():
     while True:
+        print ("********************************")
+        print ("      Edit Configurations     ")
+        print ("********************************")
+
         if not sections_loop():
             break
+
+        print ("********************************")
 
 
 def logical_display():
@@ -468,8 +492,8 @@ def logical_display():
 
     pprinttable(LOGICAL_CONFIGS, [0, 1, 2, 3, 4])
 
-    print ("Logical Display")
-
+    print ("________________________________")
+    print ("")
 
 def ambari_configs():
     run_calc()
@@ -495,6 +519,7 @@ def ambari_configs():
         print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC], cfg[POS_VALUE]))
 
     print ("________________________________")
+    print ("")
 
 
 def report():
@@ -506,8 +531,11 @@ def save():
 
 
 def change_mode():
-    print ("\t\t(1)\tSimple Mode")
-    print ("\t\t(2)\tReference Mode")
+    print ("===================================")
+    print ("       Edit Mode       ")
+    print ("===================================")
+    print ("\t(1)\tSimple Mode")
+    print ("\t(2)\tReference Mode(expose additional settings)")
 
     selection = raw_input("-- Select Mode -- : ")
 
@@ -519,20 +547,26 @@ def change_mode():
     else:
         print ("Invalid Mode. Current Mode: " + MODE)
 
+    print ("________________________________")
+    print ("")
+
 
 def action_loop():
     actions = (
-        ("Guided Config", "g"), ("Logical Display", "d"), ("Ambari Config List", "a"), ("Edit", "e"),
-        ("Save", "s"), ("Mode (expose additional settings)", "m"), ("Quit", "q"))
+        ("Guided Config", "g"), (), ("Logical Display", "l"), ("Ambari Config List", "a"), (), ("Edit", "e"),
+        ("Save", "s"), (), ("Mode (expose additional settings)", "m"), (), ("Quit", "q"))
 
     def validate(choice):
         for action in actions:
-            if choice == action[1]:
+            if len(action) > 1 and choice == action[1]:
                 return True
     print ("===================================")
     print ("======== MAIN Action Menu =========")
     for action in actions:
-        print ("\t\t({1})\t{0}".format(action[0], action[1]))
+        if len(action)>1:
+            print ("({1})\t{0}".format(action[0], action[1]))
+        else:
+            print ("--------------------")
 
     selection = raw_input(SELECT_ACTION)
 
@@ -546,7 +580,7 @@ def action_loop():
         elif selection == "e":
             edit_loop()
             return True
-        elif selection == "d":
+        elif selection == "l":
             logical_display()
             return True
         elif selection == "a":
@@ -611,11 +645,11 @@ def pprinttable(rows, fields):
         headerRowSeparator = ""
         headerRow = ""
         for loc in range(len(fields)):
-            headerRowSeparator = headerRowSeparator + "|" + "=" * lens[loc]
-            headerRow = headerRow + "|" + center(headers[fields[loc]], lens[loc])
+            headerRowSeparator = headerRowSeparator + "|" + "=" * (lens[loc]+1)
+            headerRow = headerRow + "| " + center(headers[fields[loc]], lens[loc])
 
-        headerRowSeparator = headerRowSeparator + "|"
-        headerRow = headerRow + "|"
+        headerRowSeparator = headerRowSeparator + " |"
+        headerRow = headerRow + " |"
 
         print headerRowSeparator
         print headerRow
@@ -626,9 +660,9 @@ def pprinttable(rows, fields):
             recordRow = ""
             for field in fields:
                 if isinstance(row[field], int) or isinstance(row[field], float) or isinstance(row[field], long):
-                    recordRow = recordRow + "|" + right(row[field], lens[inc])
+                    recordRow = recordRow + "| " + right(row[field], lens[inc])
                 else:
-                    recordRow = recordRow + "|" + left(row[field], lens[inc])
+                    recordRow = recordRow + "| " + left(row[field], lens[inc])
                 inc += 1
             recordRow = recordRow + "|"
 

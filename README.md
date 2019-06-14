@@ -1,2 +1,3 @@
-# hive_llap_calculator
+# Hive LLAP Calculator
+
 Memory / Configuration Calculator for Hive LLAP
