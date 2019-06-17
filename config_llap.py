@@ -7,7 +7,7 @@ import sys
 import os
 import json
 import readline
-from ambari_config import api_accessor, get_properties, set_properties
+from ambari_configs import api_accessor, get_properties, set_properties
 from cStringIO import StringIO
 
 logger = logging.getLogger('LLAPConfig')
@@ -247,7 +247,7 @@ SELECT_SECTION = "Select Section -- : "
 SELECT_ACTION = "Select Action --: "
 SELECT_CONFIG = "Select Config -- : "
 ENTER_RETURN = " enter - Go back"
-AMBARI_CFG_CMD = "./configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} --cluster=${{CLUSTER_NAME}}" + \
+AMBARI_CFG_CMD = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} --cluster=${{CLUSTER_NAME}}" + \
                     " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={0}" + \
                     " --key={1} --value={2}"
 
