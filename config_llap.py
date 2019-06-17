@@ -1,6 +1,16 @@
 #!/usr/bin/env python
 
+import optparse
+from optparse import OptionGroup
+import logging
+import sys
+import os
+import json
 import readline
+from ambari_config import api_accessor, get_properties, set_properties
+from cStringIO import StringIO
+
+logger = logging.getLogger('LLAPConfig')
 
 TF = ("true", "false")
 KB = 1024
@@ -18,8 +28,8 @@ LLAP_CACHE_PERCENTAGE = 50
 
 # Configuration
 
-# [ Short Desc, Type, Section, Config, Value, Options, Long Desc ]
-HEADER = ["Short Desc", "Type", "Section", "Config", "Value", "Options", "Long Desc"]
+# [ Short Desc, Type, Section, Config, Value, Current Value, Options, Long Desc ]
+HEADER = ["Short Desc", "Type", "Section", "Config", "Value", "Current Value", "Options", "Long Desc"]
 
 # Positions
 POS_SHORT_DESC = 0
@@ -27,8 +37,9 @@ POS_TYPE = 1
 POS_SECTION = 2
 POS_CONFIG = 3
 POS_VALUE = 4
-POS_OPTIONS = 5
-POS_LONG_DESC = 6
+POS_CUR_VALUE = 5
+POS_OPTIONS = 6
+POS_LONG_DESC = 7
 
 # Sections
 YARN_SITE = ("YARN Configuration", "yarn-site")
@@ -45,96 +56,106 @@ SECTIONS = (HOST_ENV, THRESHOLD_ENV, YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTE
 
 # Environment
 WORKER_MEMORY_GB = ["Node Memory Footprint(GB)", TYPE_INPUT, HOST_ENV,
-                    "", 16, (), ""]
+                    "", 16, 16, (), ""]
 WORKER_COUNT = ["Number of Cluster Worker Nodes", TYPE_INPUT, HOST_ENV,
-                "", 30, (), ""]
-WORKER_CORES = ["Number of Cores per Host", TYPE_INPUT, HOST_ENV, "", 8, (), ""]
+                "", 30, 30, (), ""]
+WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 8, 8, (), ""]
 
 # Thresholds
-PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80]
-PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_INPUT, THRESHOLD_ENV, "", 50]
-PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90]
-PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50]
-PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80]
-THRESHOLD_MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12]
+PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
+PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_INPUT, THRESHOLD_ENV, "", 50, None]
+PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
+PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None]
+PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
+THRESHOLD_MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
-                                                   TYPE_REFERENCE, THRESHOLD_ENV, "", 20]
+                                                   TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
-                                          THRESHOLD_ENV, "", 100]
+                                          THRESHOLD_ENV, "", 100, None]
 
 # YARN
 YARN_NM_RSRC_MEM_MB = ["Node Manager Memory(MB)", TYPE_CALC, YARN_SITE,
-                       "yarn.nodemanager.resource.memory-mb", 13107, (), ""]
+                       "yarn.nodemanager.resource.memory-mb", 13107, 13107, (), ""]
 YARN_SCH_MAX_ALLOC_MEM_MB = ["Yarn Max Mem Allocation(MB)", TYPE_CALC, YARN_SITE,
-                             "yarn.scheduler.maximum-allocation-mb", 11927, (), ""]
+                             "yarn.scheduler.maximum-allocation-mb", 11927, 11927, (), ""]
+
+DIVIDER = ["", "", "", "", "", "", "", ""]
+THRESHOLDS =    [" --  Threshold DETAILS -- ", "", "", "", "", "", "", ""]
+CLUSTER_ENV =   ["  --  CLUSTER DETAILS -- ", "", "", "", "", "", "", ""]
+YARN_ENV =      ["    --  YARN DETAILS --", "", "", "", "", "", "", ""]
+HIVE_ENV =      ["    --  HIVE DETAILS --", "", "", "", "", "", "", ""]
+TOTALS = ["> Totals", "", "", "", "", "", "", ""]
+
 
 # Hive Interactive Site
 HIVE_LLAP_QUEUE = ["YARN Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
-                   "hive.llap.daemon.queue.name", "llap", (), ""]
+                   "hive.llap.daemon.queue.name", "llap", "llap", (), ""]
 TEZ_CONTAINER_SIZE_MB = ["TEZ Container Size", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                         "hive.tez.container.size", KB * 4, (), ""]
+                         "hive.tez.container.size", KB * 4, KB * 4, (), ""]
 LLAP_DAEMON_CONTAINER_MEM_MB = ["Daemon Memory(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                                "hive.llap.daemon.yarn.container.mb", 11796, (), ""]
+                                "hive.llap.daemon.yarn.container.mb", 11796, 11796, (), ""]
 LLAP_CACHE_MEM_MB = ["Cache(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                     "hive.llap.io.memory.size", KB * 4, (), ""]
+                     "hive.llap.io.memory.size", KB * 4, KB * 4, (), ""]
 LLAP_OBJECT_CACHE_ENABLED = ["Object Cache Enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                             "hive.llap.object.cache.enabled", "true",
+                             "hive.llap.object.cache.enabled", "true", "true",
                              TF, "Cache objects (plans, hashtables, etc) in LLAP"]
 LLAP_MEMORY_MODE = ["Memory Mode", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                    "hive.llap.io.memory.mode", "cache", ("cache", "allocator", "none"), ""]
+                    "hive.llap.io.memory.mode", "cache", "cache", ("cache", "allocator", "none"), ""]
 LLAP_IO_ENABLED = ["Cache Enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                   "hive.llap.io.enabled", "true", TF, ""]
+                   "hive.llap.io.enabled", "true", "true", TF, ""]
 LLAP_IO_ALLOCATOR_NMAP_ENABLED = ["Direct I/O cache enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                                  "hive.llap.io.allocator.nmap", "false", TF,
+                                  "hive.llap.io.allocator.mmap", "false", "false", TF,
                                   "Whether ORC low-level cache should use memory mapped allocation (direct I/O)"]
 LLAP_IO_ALLOCATOR_NMAP_PATH = ["Direct I/O cache path", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                               "hive.llap.io.allocator.nmap.path", "", (), ""]
+                               "hive.llap.io.allocator.mmap.path", "", "", (), ""]
 
 LLAP_NUM_EXECUTORS_PER_DAEMON = ["Num of Executors", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                                 "hive.llap.daemon.num.executors", 12, (), ""]
+                                 "hive.llap.daemon.num.executors", 12, 12, (), ""]
 
 LLAP_IO_THREADPOOL = ["I/O Threadpool", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                      "hive.llap.io.threadpool", 12, (), ""]
+                      "hive.llap.io.threadpool.size", 12, 12, (), ""]
 
 # Hive Interactive Size (Custom)
 LLAP_PREWARMED_ENABLED = ["Prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                          "hive.prewarm.enabled", "false", TF, ""]
+                          "hive.prewarm.enabled", "false", "false", TF, ""]
 LLAP_PREWARM_NUM_CONTAINERS = ["Number of prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                               "hive.prewarm.numcontainers", 1, (), ""]
+                               "hive.prewarm.numcontainers", 1, None, (), ""]
 
 # Hive Interactive Env
 LLAP_NUM_NODES = ["Daemon Count", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                  "num_llap_nodes_for_llap_daemons", 1, (), ""]
-LLAP_CONCURRENCY = ["Query Concurrency", TYPE_INPUT, HIVE_INTERACTIVE_ENV,
-                    "hive.server2.tez.sessions.per.default.queue", 2, (), ""]
+                  "num_llap_nodes_for_llap_daemons", 1, 1, (), ""]
+LLAP_CONCURRENCY = ["Query Concurrency", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
+                    "hive.server2.tez.sessions.per.default.queue", 2, 2, (), ""]
 LLAP_AM_DAEMON_HEAP_MB = ["AM Heap for Daemons", TYPE_REFERENCE, HIVE_INTERACTIVE_ENV,
-                          "hive_heapsize", 4096, (), "Could be 2048, but defaults to 4096 in Ambari"]
+                          "hive_heapsize", 4096, 4096, (), "Could be 2048, but defaults to 4096 in Ambari"]
 LLAP_HEADROOM_MEM_MB = ["Heap Headroom", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                        "llap_headroom_space", 2048, (), ""]
+                        "llap_headroom_space", 2048, 2048, (), ""]
 LLAP_DAEMON_HEAP_MEM_MB = ["Daemon Heap size(MB)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                           "llap_heap_size", 8192, (), ""]
+                           "llap_heap_size", 8192, 8192, (), ""]
 
 # TEZ Interactive site
 TEZ_AM_MEM_MB = ["TEZ AM Container size(MB) DAG Submission", TYPE_REFERENCE, TEZ_INTERACTIVE_SITE,
-                 "tez.am.resource.memory.mb", 4 * KB, (), ""]
+                 "tez.am.resource.memory.mb", 4 * KB, 4 * KB, (), ""]
 
 # Total Section
 TOTAL_MEM_FOOTPRINT = ["Total Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                       "", 0, (), ""]
+                       "", 0, 0, (), ""]
 TOTAL_LLAP_DAEMON_FOOTPRINT = ["Total LLAP Daemon Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                               "", 0, (), ""]
+                               "", 0, 0, (), ""]
 TOTAL_LLAP_OTHER_FOOTPRINT = ["Total LLAP Other Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                              "", 0, (), ""]
+                              "", 0, 0, (), ""]
 TOTAL_LLAP_MEM_FOOTPRINT = ["Total LLAP Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                            "", 0, (), ""]
+                            "", 0, 0, (), ""]
 LLAP_QUEUE_MIN_REQUIREMENT = ["LLAP Minimum YARN Queue Capacity % Requirement", TYPE_CALC, CLUSTER_ENV,
-                              "", 0, (), ""]
+                              "", 0, 0, (), ""]
 
 LOGICAL_CONFIGS = [
+    CLUSTER_ENV,
     WORKER_MEMORY_GB,
     WORKER_COUNT,
     WORKER_CORES,
-
+    DIVIDER,
+    THRESHOLDS,
     PERCENT_OF_HOST_MEM_FOR_YARN,
     PERCENT_OF_CLUSTER_FOR_LLAP,
     PERCENT_OF_NODE_FOR_LLAP_MEM,
@@ -143,29 +164,26 @@ LOGICAL_CONFIGS = [
     PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
     PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL,
     THRESHOLD_MAX_HEADROOM_GB,
-
+    DIVIDER,
+    YARN_ENV,
     YARN_NM_RSRC_MEM_MB,
-    TOTAL_MEM_FOOTPRINT,
     YARN_SCH_MAX_ALLOC_MEM_MB,
     HIVE_LLAP_QUEUE,
-
+    TOTALS,
+    TOTAL_MEM_FOOTPRINT,
+    DIVIDER,
+    HIVE_ENV,
     LLAP_NUM_NODES,
-
     LLAP_CONCURRENCY,
     TEZ_AM_MEM_MB,
-
     LLAP_NUM_EXECUTORS_PER_DAEMON,
-
+    DIVIDER,
     LLAP_AM_DAEMON_HEAP_MB,
     LLAP_DAEMON_CONTAINER_MEM_MB,
     LLAP_DAEMON_HEAP_MEM_MB,
     LLAP_HEADROOM_MEM_MB,
     LLAP_CACHE_MEM_MB,
-
-    TOTAL_LLAP_DAEMON_FOOTPRINT,
-
-    TOTAL_LLAP_OTHER_FOOTPRINT,
-
+    DIVIDER,
     LLAP_MEMORY_MODE,
     LLAP_IO_ENABLED,
     LLAP_OBJECT_CACHE_ENABLED,
@@ -174,19 +192,25 @@ LOGICAL_CONFIGS = [
 
     LLAP_IO_ALLOCATOR_NMAP_ENABLED,
     LLAP_IO_ALLOCATOR_NMAP_PATH,
-
     TEZ_CONTAINER_SIZE_MB,
 
     LLAP_PREWARMED_ENABLED,
     LLAP_PREWARM_NUM_CONTAINERS,
 
+    TOTALS,
+    TOTAL_LLAP_DAEMON_FOOTPRINT,
+    TOTAL_LLAP_OTHER_FOOTPRINT,
     TOTAL_LLAP_MEM_FOOTPRINT,
+
+
+    DIVIDER,
     LLAP_QUEUE_MIN_REQUIREMENT]
 
 AMBARI_CONFIGS = [
     YARN_NM_RSRC_MEM_MB,
 
     YARN_SCH_MAX_ALLOC_MEM_MB,
+    WORKER_CORES,
     HIVE_LLAP_QUEUE,
     LLAP_QUEUE_MIN_REQUIREMENT,
 
@@ -227,71 +251,92 @@ AMBARI_CFG_CMD = "./configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} -
                     " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={0}" + \
                     " --key={1} --value={2}"
 
+cluster = ""
+ambari_accessor_api = None
+version_note = ""
+ambari_integration = True
+
 MODE = [TYPE_INPUT]
 
 
-def run_calc():
+class Capturing(list):
+    def __enter__(self):
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+
+    def __exit__(self, *args):
+        self.extend(self._stringio.getvalue().splitlines())
+        del self._stringio    # free up some memory
+        sys.stdout = self._stdout
+
+
+def run_calc(position):
     # print ("running calc")
 
     ## YARN
     #########
     # YARN_NM_RSRC_MEM_MB
-    YARN_NM_RSRC_MEM_MB[POS_VALUE] = WORKER_MEMORY_GB[POS_VALUE] * KB * PERCENT_OF_HOST_MEM_FOR_YARN[POS_VALUE] / 100
+    YARN_NM_RSRC_MEM_MB[position] = WORKER_MEMORY_GB[position] * KB * PERCENT_OF_HOST_MEM_FOR_YARN[position] / 100
     # YARN_SCH_MAX_ALLOC_MEM_MB
     # Adding a percent for a little clearance on mem settings.
-    YARN_SCH_MAX_ALLOC_MEM_MB[POS_VALUE] = YARN_NM_RSRC_MEM_MB[POS_VALUE] * \
-                                           (PERCENT_OF_NODE_FOR_LLAP_MEM[POS_VALUE] + 1) / 100
+    YARN_SCH_MAX_ALLOC_MEM_MB[position] = YARN_NM_RSRC_MEM_MB[position] * \
+                                           (PERCENT_OF_NODE_FOR_LLAP_MEM[position] + 1) / 100
 
     ## LLAP
     #########
     # LLAP_NUM_NODES
-    LLAP_NUM_NODES[POS_VALUE] = WORKER_COUNT[POS_VALUE] * PERCENT_OF_CLUSTER_FOR_LLAP[POS_VALUE] / 100
+    LLAP_NUM_NODES[position] = WORKER_COUNT[position] * PERCENT_OF_CLUSTER_FOR_LLAP[position] / 100
 
     # LLAP_NUM_EXECUTORS_PER_DAEMON
-    LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE] = WORKER_CORES[POS_VALUE] * \
-                                               PERCENT_OF_CORES_FOR_EXECUTORS[POS_VALUE] / 100
+    LLAP_NUM_EXECUTORS_PER_DAEMON[position] = WORKER_CORES[position] * \
+                                               PERCENT_OF_CORES_FOR_EXECUTORS[position] / 100
 
     # LLAP_DAEMON_CONTAINER_MEM_MB
-    LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] = YARN_NM_RSRC_MEM_MB[POS_VALUE] * \
-                                              (PERCENT_OF_NODE_FOR_LLAP_MEM[POS_VALUE]) / 100
+    LLAP_DAEMON_CONTAINER_MEM_MB[position] = YARN_NM_RSRC_MEM_MB[position] * \
+                                              (PERCENT_OF_NODE_FOR_LLAP_MEM[position]) / 100
 
     # LLAP_HEADROOM_MEM_MB
     # =IF((E37*0.2) > (12*1024),12*1024,E37*0.2)
-    if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] * PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[POS_VALUE] / 100 \
-            > THRESHOLD_MAX_HEADROOM_GB[POS_VALUE] * KB:
-        LLAP_HEADROOM_MEM_MB[POS_VALUE] = THRESHOLD_MAX_HEADROOM_GB[POS_VALUE] * KB
+    if LLAP_DAEMON_CONTAINER_MEM_MB[position] * PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[position] / 100 \
+            > THRESHOLD_MAX_HEADROOM_GB[position] * KB:
+        LLAP_HEADROOM_MEM_MB[position] = THRESHOLD_MAX_HEADROOM_GB[position] * KB
     else:
-        LLAP_HEADROOM_MEM_MB[POS_VALUE] = LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] * \
-                                          PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[POS_VALUE] / 100
+        LLAP_HEADROOM_MEM_MB[position] = LLAP_DAEMON_CONTAINER_MEM_MB[position] * \
+                                          PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[position] / 100
 
     # LLAP_DAEMON_HEAP_MEM_MB
-    LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE] = (LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] - LLAP_HEADROOM_MEM_MB[POS_VALUE]) * \
-                                         (100 - PERCENT_OF_LLAP_FOR_CACHE[POS_VALUE]) / 100
+    LLAP_DAEMON_HEAP_MEM_MB[position] = (LLAP_DAEMON_CONTAINER_MEM_MB[position] - LLAP_HEADROOM_MEM_MB[position]) * \
+                                         (100 - PERCENT_OF_LLAP_FOR_CACHE[position]) / 100
 
     # LLAP_CACHE_MEM_MB
-    LLAP_CACHE_MEM_MB[POS_VALUE] = LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] - LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE]
+    LLAP_CACHE_MEM_MB[position] = LLAP_DAEMON_CONTAINER_MEM_MB[position] - LLAP_DAEMON_HEAP_MEM_MB[position]
 
     # LLAP_IO_THREADPOOL
-    LLAP_IO_THREADPOOL[POS_VALUE] = LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE] * \
-                                    PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL[POS_VALUE] / 100
+    LLAP_IO_THREADPOOL[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * \
+                                    PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL[position] / 100
+    run_totals_calc(position)
 
+
+def run_totals_calc(position):
     # Total LLAP Daemon Footprint
-    TOTAL_LLAP_DAEMON_FOOTPRINT[POS_VALUE] = LLAP_NUM_NODES[POS_VALUE] * LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE] \
-                                             + LLAP_AM_DAEMON_HEAP_MB[POS_VALUE]
+    TOTAL_LLAP_DAEMON_FOOTPRINT[position] = LLAP_NUM_NODES[position] * LLAP_DAEMON_CONTAINER_MEM_MB[position] \
+                                             + LLAP_AM_DAEMON_HEAP_MB[position]
 
     # Total LLAP Other Footprint
     # TODO: Add support for PREWARMED CONTAINERS.
-    TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE] = LLAP_CONCURRENCY[POS_VALUE] * TEZ_AM_MEM_MB[POS_VALUE]
+    TOTAL_LLAP_OTHER_FOOTPRINT[position] = LLAP_CONCURRENCY[position] * TEZ_AM_MEM_MB[position]
 
     # Total LLAP Memory Footprint
-    TOTAL_LLAP_MEM_FOOTPRINT[POS_VALUE] = TOTAL_LLAP_DAEMON_FOOTPRINT[POS_VALUE] + TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE]
+    TOTAL_LLAP_MEM_FOOTPRINT[position] = TOTAL_LLAP_DAEMON_FOOTPRINT[position] + TOTAL_LLAP_OTHER_FOOTPRINT[position]
 
     # Total Cluster Memory Footprint
-    TOTAL_MEM_FOOTPRINT[POS_VALUE] = YARN_NM_RSRC_MEM_MB[POS_VALUE] * WORKER_COUNT[POS_VALUE]
+    TOTAL_MEM_FOOTPRINT[position] = YARN_NM_RSRC_MEM_MB[position] * WORKER_COUNT[position]
 
     # Total LLAP Yarn Queue Requirement (Percent of Root Queue)
-    LLAP_QUEUE_MIN_REQUIREMENT[POS_VALUE] = round(float(TOTAL_LLAP_MEM_FOOTPRINT[POS_VALUE]) / \
-                                                  TOTAL_MEM_FOOTPRINT[POS_VALUE] * 100, 2)
+    LLAP_QUEUE_MIN_REQUIREMENT[position] = round(float(TOTAL_LLAP_MEM_FOOTPRINT[position]) / \
+                                                  TOTAL_MEM_FOOTPRINT[position] * 100, 2)
+
 
 
 def get_current(selection, lst):
@@ -373,7 +418,7 @@ def section_loop(selection):
         # Find configs in Section that are "TYPE_INPUT"
         section_configs = []
         for config in LOGICAL_CONFIGS:
-            if config[POS_SECTION][1] == section_choice[1] and config[POS_TYPE] in MODE:
+            if isinstance(config[POS_SECTION], tuple) and config[POS_SECTION][1] == section_choice[1] and config[POS_TYPE] in MODE:
                 section_configs.append(config)
 
         config = select_config(section_choice, section_configs)
@@ -384,7 +429,7 @@ def section_loop(selection):
         if not change_config(config):
             return True
         else:
-            run_calc()
+            run_calc(POS_VALUE)
 
 
 def select_config(section, section_configs):
@@ -461,7 +506,7 @@ def guided_loop():
     for config in guided_configs:
         change_config(config)
 
-    run_calc()
+    run_calc(POS_VALUE)
     logical_display()
 
 
@@ -505,21 +550,22 @@ def edit_loop():
 
 
 def logical_display():
-    run_calc()
+    run_calc(POS_VALUE)
 
-    pprinttable(LOGICAL_CONFIGS, [0, 1, 2, 3, 4])
+    global LOGICAL_CONFIGS
+    pprinttable(LOGICAL_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
 
     print ("")
     raw_input("press enter...")
 
 def ambari_configs():
-    run_calc()
+    run_calc(POS_VALUE)
     print(chr(27) + "[2J")
     print ("===================================")
     print ("       Ambari Configurations       ")
     print ("===================================")
 
-    pprinttable(AMBARI_CONFIGS, [0, 1, 2, 3, 4])
+    pprinttable(AMBARI_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
 
     manual = []
     for cfg in AMBARI_CONFIGS:
@@ -576,6 +622,11 @@ def change_mode():
     print ("")
 
 
+def environment_status():
+    status = "Ambari Integration On:\t("+str(ambari_integration)+")\nCurrent mode:\t\t*"+str(MODE)+"*"
+    return status
+
+
 def action_loop():
     actions = (
         ("Guided Config", "g"), (), ("Logical Display", "l"), ("Ambari Config List", "a"), (), ("Edit", "e"),
@@ -589,8 +640,7 @@ def action_loop():
     print(chr(27) + "[2J")
     print ("===================================")
     print ("         MAIN Action Menu          ")
-    print ("                    * current mode *")
-    print ("                     " + str(MODE))
+    print environment_status()
     print ("===================================")
     for action in actions:
         if len(action)>1:
@@ -648,6 +698,30 @@ def right(field, length):
     return " " * diff + str(field)
 
 
+def populate_current():
+    if not ambari_integration:
+        return False
+
+    section_configs = {}
+    for configs in VALID_AMBARI_SECTIONS:
+        with Capturing() as output:
+            get_properties(cluster, configs[1], [], ambari_accessor_api)
+        lclJson = "".join(output)
+        section_configs[configs[1]] = json.loads(lclJson)
+
+    for scKey in section_configs.keys():
+        section_config = section_configs[scKey]
+
+        for configs in VALID_AMBARI_SECTIONS:
+            for ambariConfig in AMBARI_CONFIGS:
+                if ambariConfig[POS_SECTION][1] == scKey:
+                    # set_config(ambariConfig, POS_CUR_VALUE)
+                    ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
+
+
+    run_totals_calc(POS_CUR_VALUE)
+
+
 def pprinttable(rows, fields):
     if len(rows) > 0:
         # headers = HEADER._fields
@@ -659,17 +733,17 @@ def pprinttable(rows, fields):
         for row in rows:
             inc = 0
             for field in fields:
-                if isinstance(row[field], int) or isinstance(row[field], float) or isinstance(row[field], long):
+                if isinstance(row[field], (int, float, long)):
                     if lens[inc] < 16:
                         lens[inc] = 16
-                elif isinstance(row[field], list) or isinstance(row[field], tuple):
+                elif isinstance(row[field], (list, tuple)):
                     size = 2
                     for i in range(len(row[field])):
                         size += len(row[field][i]) + 3
                     if size > lens[inc]:
                         lens[inc] = size
                 else:
-                    if len(row[field]) > lens[inc]:
+                    if row[field] is not None and (len(row[field]) > lens[inc]):
                         lens[inc] = len(row[field])
                 inc += 1
 
@@ -679,8 +753,8 @@ def pprinttable(rows, fields):
             headerRowSeparator = headerRowSeparator + "|" + "=" * (lens[loc]+1)
             headerRow = headerRow + "| " + center(headers[fields[loc]], lens[loc])
 
-        headerRowSeparator = headerRowSeparator + " |"
-        headerRow = headerRow + " |"
+        headerRowSeparator = headerRowSeparator + "|"
+        headerRow = headerRow + "|"
 
         print headerRowSeparator
         print headerRow
@@ -703,22 +777,27 @@ def pprinttable(rows, fields):
 
 
 def main():
-    # parser = optparse.OptionParser(usage="usage: %prog [options]")
+    global ambari_integration
+    global cluster
+    global version_note
+    global ambari_accessor_api
 
-    # login_options_group = OptionGroup(parser, "To specify credentials please use \"-e\" OR \"-u\" and \"-p'\"")
-    # login_options_group.add_option("-u", "--user", dest="user", default="admin", help="Optional user ID to use for authentication. Default is 'admin'")
-    # login_options_group.add_option("-p", "--password", dest="password", default="admin", help="Optional password to use for authentication. Default is 'admin'")
-    # login_options_group.add_option("-e", "--credentials-file", dest="credentials_file", help="Optional file with user credentials separated by new line.")
-    # parser.add_option_group(login_options_group)
+    parser = optparse.OptionParser(usage="usage: %prog [options]")
 
-    # parser.add_option("-t", "--port", dest="port", default="8080", help="Optional port number for Ambari server. Default is '8080'. Provide empty string to not use port.")
-    # parser.add_option("-s", "--protocol", dest="protocol", default="http", help="Optional support of SSL. Default protocol is 'http'")
-    # parser.add_option("--unsafe", action="store_true", dest="unsafe", help="Skip SSL certificate verification.")
+    login_options_group = OptionGroup(parser, "To specify credentials please use \"-e\" OR \"-u\" and \"-p'\"")
+    login_options_group.add_option("-u", "--user", dest="user", default="admin", help="Optional user ID to use for authentication. Default is 'admin'")
+    login_options_group.add_option("-p", "--password", dest="password", default="admin", help="Optional password to use for authentication. Default is 'admin'")
+    login_options_group.add_option("-e", "--credentials-file", dest="credentials_file", help="Optional file with user credentials separated by new line.")
+    parser.add_option_group(login_options_group)
+
+    parser.add_option("-t", "--port", dest="port", default="8080", help="Optional port number for Ambari server. Default is '8080'. Provide empty string to not use port.")
+    parser.add_option("-s", "--protocol", dest="protocol", default="http", help="Optional support of SSL. Default protocol is 'http'")
+    parser.add_option("--unsafe", action="store_true", dest="unsafe", help="Skip SSL certificate verification.")
     # parser.add_option("-a", "--action", dest="action", help="Script action: <get>, <set>, <delete>")
-    # parser.add_option("-l", "--host", dest="host", help="Server external host name")
-    # parser.add_option("-n", "--cluster", dest="cluster", help="Name given to cluster. Ex: 'c1'")
+    parser.add_option("-l", "--host", dest="host", help="Server external host name")
+    parser.add_option("-n", "--cluster", dest="cluster", help="Name given to cluster. Ex: 'c1'")
     # parser.add_option("-c", "--config-type", dest="config_type", help="One of the various configuration types in Ambari. Ex: core-site, hdfs-site, mapred-queue-acls, etc.")
-    # parser.add_option("-b", "--version-note", dest="version_note", default="", help="Version change notes which will help to know what has been changed in this config. This value is optional and is used for actions <set> and <delete>.")
+    parser.add_option("-b", "--version-note", dest="version_note", default="", help="Version change notes which will help to know what has been changed in this config. This value is optional and is used for actions <set> and <delete>.")
     #
     # config_options_group = OptionGroup(parser, "To specify property(s) please use \"-f\" OR \"-k\" and \"-v'\"")
     # config_options_group.add_option("-f", "--file", dest="file", help="File where entire configurations are saved to, or read from. Supported extensions (.xml, .json>)")
@@ -726,10 +805,77 @@ def main():
     # config_options_group.add_option("-v", "--value", dest="value", help="Optional value to be set. Not necessary for 'get' or 'delete' actions.")
     # parser.add_option_group(config_options_group)
     #
-    # (options, args) = parser.parse_args()
+
+    parser.add_option("-w", "--workers", dest="workers", default="10", help="How many worker nodes in the cluster?")
+    parser.add_option("-m", "--memory", dest="memory", default="16", help="How much memory does each worker node have (GB)?")
+
+    (options, args) = parser.parse_args()
+
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.INFO)
+    stdout_handler.setFormatter(formatter)
+    logger.addHandler(stdout_handler)
+
+    # options with default value
+
+    if not options.credentials_file and (not options.user or not options.password):
+        ambari_integration = False
+        logger.info("Ambari Credential information missing.  Running in standalone mode.")
+        # parser.error("You should use option (-e) to set file with Ambari user credentials"
+        #              " OR use (-u) username and (-p) password")
+
+    if options.credentials_file:
+        if os.path.isfile(options.credentials_file):
+            try:
+                with open(options.credentials_file) as credentials_file:
+                    file_content = credentials_file.read()
+                    login_lines = filter(None, file_content.splitlines())
+                    if len(login_lines) == 2:
+                        user = login_lines[0]
+                        password = login_lines[1]
+                    else:
+                        logger.error("Incorrect content of {0} file. File should contain Ambari username and password separated by new line.".format(options.credentials_file))
+                        return -1
+            except Exception as e:
+                logger.error("You don't have permissions to {0} file".format(options.credentials_file))
+                return -1
+        else:
+            logger.error("File {0} doesn't exist or you don't have permissions.".format(options.credentials_file))
+            return -1
+    else:
+        user = options.user
+        password = options.password
+
+    port = options.port
+    protocol = options.protocol
+
+    if options.workers:
+        WORKER_COUNT[POS_VALUE] = int(options.workers)
+        WORKER_COUNT[POS_CUR_VALUE] = int(options.workers)
+    if options.memory:
+        WORKER_MEMORY_GB[POS_VALUE] = int(options.memory)
+        WORKER_MEMORY_GB[POS_CUR_VALUE] = int(options.memory)
+
+    #options without default value
+    if None in [options.host, options.cluster]:
+        ambari_integration = False
+        logger.info("Ambari Integration information missing.  Running in standalone mode.")
+        # parser.error("One of required options is not passed")
+
+    # action = options.action
+    host = options.host
+    cluster = options.cluster
+    # config_type = options.config_type
+    version_note = options.version_note
+
+    if ambari_integration:
+        ambari_accessor_api = api_accessor(host, user, password, protocol, port, options.unsafe)
+        populate_current()
 
     # Setup Base defaults
-    run_calc()
+    run_calc(POS_VALUE)
 
     while True:
         if not action_loop():
