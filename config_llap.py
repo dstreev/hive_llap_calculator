@@ -9,6 +9,7 @@ import json
 import readline
 from ambari_configs import api_accessor, get_properties, set_properties
 from cStringIO import StringIO
+import math
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -78,6 +79,8 @@ YARN_NM_RSRC_MEM_MB = ["Node Manager Memory(MB)", TYPE_CALC, YARN_SITE,
                        "yarn.nodemanager.resource.memory-mb", 13107, 13107, (), ""]
 YARN_SCH_MAX_ALLOC_MEM_MB = ["Yarn Max Mem Allocation(MB)", TYPE_CALC, YARN_SITE,
                              "yarn.scheduler.maximum-allocation-mb", 11927, 11927, (), ""]
+YARN_SCH_MIN_ALLOC_MEM_MB = ["Yarn Min Mem Allocation(MB)", TYPE_REFERENCE, YARN_SITE,
+                             "yarn.scheduler.minimum-allocation-mb", 2048, 2048, (), ""]
 
 DIVIDER = ["", "", "", "", "", "", "", ""]
 THRESHOLDS =    [" --  Threshold DETAILS -- ", "", "", "", "", "", "", ""]
@@ -170,6 +173,7 @@ LOGICAL_CONFIGS = [
     YARN_ENV,
     YARN_NM_RSRC_MEM_MB,
     YARN_SCH_MAX_ALLOC_MEM_MB,
+    YARN_SCH_MIN_ALLOC_MEM_MB,
     HIVE_LLAP_QUEUE,
     TOTALS,
     TOTAL_MEM_FOOTPRINT,
@@ -213,6 +217,7 @@ AMBARI_CONFIGS = [
     YARN_NM_RSRC_MEM_MB,
 
     YARN_SCH_MAX_ALLOC_MEM_MB,
+    YARN_SCH_MIN_ALLOC_MEM_MB,
     WORKER_CORES,
     HIVE_LLAP_QUEUE,
     LLAP_QUEUE_MIN_REQUIREMENT,
@@ -326,7 +331,13 @@ def run_calc(position):
 
 def run_totals_calc(position):
     # Total LLAP Daemon Footprint
-    TOTAL_LLAP_DAEMON_FOOTPRINT[position] = LLAP_NUM_NODES[position] * LLAP_DAEMON_CONTAINER_MEM_MB[position] \
+    # True Daemon NM Memory use needs to round to the yarn.min.container.size.
+    # LLAP_DAEMON_CONTAINER_MEM_MB[position]
+    # YARN_SCH_MIN_ALLOC_MEM_MB[position]
+    # Round Up!
+    factor = math.ceil(float(LLAP_DAEMON_CONTAINER_MEM_MB[position]) / YARN_SCH_MIN_ALLOC_MEM_MB[position])
+
+    TOTAL_LLAP_DAEMON_FOOTPRINT[position] = LLAP_NUM_NODES[position] * factor * YARN_SCH_MIN_ALLOC_MEM_MB[position] \
                                              + LLAP_AM_DAEMON_HEAP_MB[position]
 
     # Total LLAP Other Footprint
