@@ -123,6 +123,8 @@ LLAP_PREWARM_NUM_CONTAINERS = ["Number of prewarmed Containers", TYPE_REFERENCE,
 
 # Hive Interactive Env
 LLAP_NUM_NODES = ["Daemon Count", TYPE_CALC, HIVE_INTERACTIVE_ENV,
+                  "num_llap_nodes", 1, 1, (), ""]
+LLAP_NUM_NODES_ALT = ["Daemon Count(legacy)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
                   "num_llap_nodes_for_llap_daemons", 1, 1, (), ""]
 LLAP_CONCURRENCY = ["Query Concurrency", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
                     "hive.server2.tez.sessions.per.default.queue", 2, 2, (), ""]
@@ -174,6 +176,7 @@ LOGICAL_CONFIGS = [
     DIVIDER,
     HIVE_ENV,
     LLAP_NUM_NODES,
+    LLAP_NUM_NODES_ALT,
     LLAP_CONCURRENCY,
     TEZ_AM_MEM_MB,
     LLAP_NUM_EXECUTORS_PER_DAEMON,
@@ -215,6 +218,7 @@ AMBARI_CONFIGS = [
     LLAP_QUEUE_MIN_REQUIREMENT,
 
     LLAP_NUM_NODES,
+    LLAP_NUM_NODES_ALT,
 
     LLAP_CONCURRENCY,
     TEZ_AM_MEM_MB,
@@ -287,6 +291,8 @@ def run_calc(position):
     #########
     # LLAP_NUM_NODES
     LLAP_NUM_NODES[position] = WORKER_COUNT[position] * PERCENT_OF_CLUSTER_FOR_LLAP[position] / 100
+    # Sync Values.
+    LLAP_NUM_NODES_ALT[position] = LLAP_NUM_NODES[position]
 
     # LLAP_NUM_EXECUTORS_PER_DAEMON
     LLAP_NUM_EXECUTORS_PER_DAEMON[position] = WORKER_CORES[position] * \
@@ -718,6 +724,13 @@ def populate_current():
                     # set_config(ambariConfig, POS_CUR_VALUE)
                     ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
 
+    if LLAP_NUM_NODES[POS_CUR_VALUE] != LLAP_NUM_NODES_ALT[POS_CUR_VALUE]:
+        print ("WARNING: In your current Ambari Configuration, similar legacy configurations are not in Sync.  These need to be in sync!!!!\n\t" +
+               LLAP_NUM_NODES[POS_CONFIG] + ":" + str(LLAP_NUM_NODES[POS_CUR_VALUE]) + "\n\t" +
+               LLAP_NUM_NODES_ALT[POS_CONFIG] + ":" + str(LLAP_NUM_NODES_ALT[POS_CUR_VALUE]) +
+               "\nOur calculations for the current configuration may be off until these are corrected.")
+
+    raw_input("press enter to continue...")
 
     run_totals_calc(POS_CUR_VALUE)
 
