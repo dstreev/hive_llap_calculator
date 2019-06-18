@@ -729,8 +729,7 @@ def populate_current():
                LLAP_NUM_NODES[POS_CONFIG] + ":" + str(LLAP_NUM_NODES[POS_CUR_VALUE]) + "\n\t" +
                LLAP_NUM_NODES_ALT[POS_CONFIG] + ":" + str(LLAP_NUM_NODES_ALT[POS_CUR_VALUE]) +
                "\nOur calculations for the current configuration may be off until these are corrected.")
-
-    raw_input("press enter to continue...")
+        raw_input("press enter to continue...")
 
     run_totals_calc(POS_CUR_VALUE)
 
