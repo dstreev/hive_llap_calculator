@@ -94,7 +94,7 @@ TOTALS = ["> Totals", "", "", "", "", "", "", ""]
 HIVE_LLAP_QUEUE = ["YARN Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
                    "hive.llap.daemon.queue.name", "llap", "llap", (), ""]
 TEZ_CONTAINER_SIZE_MB = ["TEZ Container Size", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                         "hive.tez.container.size", KB * 4, KB * 4, (), ""]
+                         "hive.tez.container.size", KB * 4, KB * 4, (), "Tez container size when LLAP is run with hive.execution.mode=container, which launches container instances for the job."]
 LLAP_DAEMON_CONTAINER_MEM_MB = ["Daemon Memory(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
                                 "hive.llap.daemon.yarn.container.mb", 11796, 11796, (), ""]
 LLAP_CACHE_MEM_MB = ["Cache(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
@@ -732,8 +732,11 @@ def populate_current():
         for configs in VALID_AMBARI_SECTIONS:
             for ambariConfig in AMBARI_CONFIGS:
                 if ambariConfig[POS_SECTION][1] == scKey:
+                    try:
                     # set_config(ambariConfig, POS_CUR_VALUE)
-                    ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
+                        ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
+                    except:
+                        print("Skipping property lookup: " + ambariConfig[POS_CUR_VALUE])
 
     if LLAP_NUM_NODES[POS_CUR_VALUE] != LLAP_NUM_NODES_ALT[POS_CUR_VALUE]:
         print ("WARNING: In your current Ambari Configuration, similar legacy configurations are not in Sync.  These need to be in sync!!!!\n\t" +
