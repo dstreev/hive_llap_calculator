@@ -736,7 +736,7 @@ def populate_current():
                     # set_config(ambariConfig, POS_CUR_VALUE)
                         ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
                     except:
-                        print("Skipping property lookup: " + ambariConfig[POS_CUR_VALUE])
+                        print("Skipping property lookup: " + str(ambariConfig[POS_CUR_VALUE]))
 
     if LLAP_NUM_NODES[POS_CUR_VALUE] != LLAP_NUM_NODES_ALT[POS_CUR_VALUE]:
         print ("WARNING: In your current Ambari Configuration, similar legacy configurations are not in Sync.  These need to be in sync!!!!\n\t" +
