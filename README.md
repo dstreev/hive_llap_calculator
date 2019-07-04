@@ -83,6 +83,16 @@ If you supply details of the cluster size with
 
 the system will estimate additional 'totals' for the current environment.  Which you can use for validation.
 
+Example:
+```
+# Connecting to an Ambari Server basic configuration
+./config_llap.py --host <ambari_host> --port <ambari_port> --cluster <cluster_name> --credentials-file credentials.txt --workers 50 --memory 256
+
+
+# Connecting to an Ambari Server with a Self-Signed SSL Cert
+./config_llap.py --host <ambari_host> --port <ambari_port> --cluster <cluster_name> --credentials-file credentials.txt -s https --unsafe --workers 50 --memory 256
+```
+
 ## Notes
 
 [Ambari-Config](./ambari_config.py) is a copy of the 'configs.py' resource for Ambari-Server found at `/var/lib/ambari-server/resources/scripts` .  The version here was pulled from Ambari 2.7.3.0.
