@@ -20,7 +20,7 @@ Run
 
 Follow the prompts.
 
-'Ambari Config List' will produce commands that can be run with [Ambari's Command Interface](configs.py)
+'Ambari Config List' will produce commands that can be run with [Ambari's Command Interface](ambari_configs.py)
 
 You'll need to create a few environment variables to support running the Ambari command outputs:
 - AMBARI_HOST
@@ -95,4 +95,4 @@ Example:
 
 ## Notes
 
-[Ambari-Config](./ambari_config.py) is a copy of the 'configs.py' resource for Ambari-Server found at `/var/lib/ambari-server/resources/scripts` .  The version here was pulled from Ambari 2.7.3.0.
+[Ambari-Config](./ambari_configs.py) is a copy of the 'configs.py' resource for Ambari-Server found at `/var/lib/ambari-server/resources/scripts` .  The version here was pulled from Ambari 2.7.3.0.
