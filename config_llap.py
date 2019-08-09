@@ -584,6 +584,12 @@ def ambari_configs():
 
     pprinttable(AMBARI_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
 
+    print ("===================================")
+    print (" NOTE: If your Ambari connection is SSL, you'll need to add the following to each line:")
+    print ("      --unsafe (if cert is self-signed")
+    print ("      --protocol=https")
+    print ("  ")
+
     manual = []
     for cfg in AMBARI_CONFIGS:
         if cfg[POS_SECTION] in VALID_AMBARI_SECTIONS:
