@@ -49,7 +49,7 @@ HIVE_INTERACTIVE_ENV = ("LLAP Environment", "hive-interactive-env")
 TEZ_INTERACTIVE_SITE = ("LLAP Tez Configuration", "tez-interactive-site")
 HOST_ENV = ("Cluster Host Configuration", "host-env")
 THRESHOLD_ENV = ("Calculation Thresholds", "threshold-env")
-CLUSTER_ENV = ("Cluster Environment", "cluster-env")
+CLUSTER_ENV = ("Cluster Environment", "")
 
 VALID_AMBARI_SECTIONS = (YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTERACTIVE_ENV, TEZ_INTERACTIVE_SITE)
 
@@ -64,8 +64,8 @@ WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodeman
 
 # Thresholds
 PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
-PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_INPUT, THRESHOLD_ENV, "", 50, None]
-PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
+# PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_CALC, THRESHOLD_ENV, "", 50, None]
+# PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
 PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None]
 PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
 THRESHOLD_MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None]
@@ -84,7 +84,7 @@ YARN_SCH_MIN_ALLOC_MEM_MB = ["Yarn Min Mem Allocation(MB)", TYPE_REFERENCE, YARN
 
 DIVIDER = ["", "", "", "", "", "", "", ""]
 THRESHOLDS =    [" --  Threshold DETAILS -- ", "", "", "", "", "", "", ""]
-CLUSTER_ENV =   ["  --  CLUSTER DETAILS -- ", "", "", "", "", "", "", ""]
+CLUSTER_DETAILS =   ["  --  CLUSTER DETAILS -- ", "", "", "", "", "", "", ""]
 YARN_ENV =      ["    --  YARN DETAILS --", "", "", "", "", "", "", ""]
 HIVE_ENV =      ["    --  HIVE DETAILS --", "", "", "", "", "", "", ""]
 TOTALS = ["> Totals", "", "", "", "", "", "", ""]
@@ -125,7 +125,7 @@ LLAP_PREWARM_NUM_CONTAINERS = ["Number of prewarmed Containers", TYPE_REFERENCE,
                                "hive.prewarm.numcontainers", 1, None, (), ""]
 
 # Hive Interactive Env
-LLAP_NUM_NODES = ["Daemon Count", TYPE_CALC, HIVE_INTERACTIVE_ENV,
+LLAP_NUM_NODES = ["Daemon Count", TYPE_INPUT, HIVE_INTERACTIVE_ENV,
                   "num_llap_nodes", 1, 1, (), ""]
 LLAP_NUM_NODES_ALT = ["Daemon Count(legacy)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
                   "num_llap_nodes_for_llap_daemons", 1, 1, (), ""]
@@ -155,15 +155,15 @@ LLAP_QUEUE_MIN_REQUIREMENT = ["LLAP Minimum YARN Queue Capacity % Requirement", 
                               "", 0, 0, (), ""]
 
 LOGICAL_CONFIGS = [
-    CLUSTER_ENV,
+    CLUSTER_DETAILS,
     WORKER_MEMORY_GB,
     WORKER_COUNT,
     WORKER_CORES,
     DIVIDER,
     THRESHOLDS,
     PERCENT_OF_HOST_MEM_FOR_YARN,
-    PERCENT_OF_CLUSTER_FOR_LLAP,
-    PERCENT_OF_NODE_FOR_LLAP_MEM,
+    # PERCENT_OF_CLUSTER_FOR_LLAP,
+    # PERCENT_OF_NODE_FOR_LLAP_MEM,
     PERCENT_OF_LLAP_FOR_CACHE,
     PERCENT_OF_CORES_FOR_EXECUTORS,
     PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
@@ -194,15 +194,19 @@ LOGICAL_CONFIGS = [
     LLAP_MEMORY_MODE,
     LLAP_IO_ENABLED,
     LLAP_OBJECT_CACHE_ENABLED,
+    DIVIDER,
 
     LLAP_IO_THREADPOOL,
+    DIVIDER,
 
     LLAP_IO_ALLOCATOR_NMAP_ENABLED,
     LLAP_IO_ALLOCATOR_NMAP_PATH,
     TEZ_CONTAINER_SIZE_MB,
+    DIVIDER,
 
     LLAP_PREWARMED_ENABLED,
     LLAP_PREWARM_NUM_CONTAINERS,
+    DIVIDER,
 
     TOTALS,
     TOTAL_LLAP_DAEMON_FOOTPRINT,
@@ -287,15 +291,11 @@ def run_calc(position):
     #########
     # YARN_NM_RSRC_MEM_MB
     YARN_NM_RSRC_MEM_MB[position] = WORKER_MEMORY_GB[position] * KB * PERCENT_OF_HOST_MEM_FOR_YARN[position] / 100
-    # YARN_SCH_MAX_ALLOC_MEM_MB
-    # Adding a percent for a little clearance on mem settings.
-    YARN_SCH_MAX_ALLOC_MEM_MB[position] = YARN_NM_RSRC_MEM_MB[position] * \
-                                           (PERCENT_OF_NODE_FOR_LLAP_MEM[position] + 1) / 100
 
     ## LLAP
     #########
     # LLAP_NUM_NODES
-    LLAP_NUM_NODES[position] = WORKER_COUNT[position] * PERCENT_OF_CLUSTER_FOR_LLAP[position] / 100
+    # LLAP_NUM_NODES[position] = WORKER_COUNT[position] * PERCENT_OF_CLUSTER_FOR_LLAP[position] / 100
     # Sync Values.
     LLAP_NUM_NODES_ALT[position] = LLAP_NUM_NODES[position]
 
@@ -303,9 +303,18 @@ def run_calc(position):
     LLAP_NUM_EXECUTORS_PER_DAEMON[position] = WORKER_CORES[position] * \
                                                PERCENT_OF_CORES_FOR_EXECUTORS[position] / 100
 
+    # Total LLAP Other Footprint
+    # TODO: Add support for PREWARMED CONTAINERS.
+    TOTAL_LLAP_OTHER_FOOTPRINT[position] = LLAP_CONCURRENCY[position] * TEZ_AM_MEM_MB[position]
+
+    OTHER_MEM_PER_NODE =  TOTAL_LLAP_OTHER_FOOTPRINT[position] / LLAP_NUM_NODES[position]
+
     # LLAP_DAEMON_CONTAINER_MEM_MB
-    LLAP_DAEMON_CONTAINER_MEM_MB[position] = YARN_NM_RSRC_MEM_MB[position] * \
-                                              (PERCENT_OF_NODE_FOR_LLAP_MEM[position]) / 100
+    LLAP_DAEMON_CONTAINER_MEM_MB[position] = YARN_NM_RSRC_MEM_MB[position] - OTHER_MEM_PER_NODE
+
+    # YARN_SCH_MAX_ALLOC_MEM_MB
+    # Adding a percent for a little clearance on mem settings.
+    YARN_SCH_MAX_ALLOC_MEM_MB[position] = LLAP_DAEMON_CONTAINER_MEM_MB[position] + 1
 
     # LLAP_HEADROOM_MEM_MB
     # =IF((E37*0.2) > (12*1024),12*1024,E37*0.2)
@@ -340,9 +349,9 @@ def run_totals_calc(position):
     TOTAL_LLAP_DAEMON_FOOTPRINT[position] = LLAP_NUM_NODES[position] * factor * YARN_SCH_MIN_ALLOC_MEM_MB[position] \
                                              + LLAP_AM_DAEMON_HEAP_MB[position]
 
-    # Total LLAP Other Footprint
-    # TODO: Add support for PREWARMED CONTAINERS.
-    TOTAL_LLAP_OTHER_FOOTPRINT[position] = LLAP_CONCURRENCY[position] * TEZ_AM_MEM_MB[position]
+    # # Total LLAP Other Footprint
+    # # TODO: Add support for PREWARMED CONTAINERS.
+    # TOTAL_LLAP_OTHER_FOOTPRINT[position] = LLAP_CONCURRENCY[position] * TEZ_AM_MEM_MB[position]
 
     # Total LLAP Memory Footprint
     TOTAL_LLAP_MEM_FOOTPRINT[position] = TOTAL_LLAP_DAEMON_FOOTPRINT[position] + TOTAL_LLAP_OTHER_FOOTPRINT[position]
@@ -570,7 +579,7 @@ def logical_display():
     run_calc(POS_VALUE)
 
     global LOGICAL_CONFIGS
-    pprinttable(LOGICAL_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
+    pprinttable(LOGICAL_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_SECTION, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
 
     print ("")
     raw_input("press enter...")
