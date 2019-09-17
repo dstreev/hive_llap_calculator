@@ -2,6 +2,12 @@
 
 Memory / Configuration Calculator for Hive LLAP.
 
+## Change Log
+
+| Date | Change |
+| :--- | :------ |
+|2019-09-17 | Changed the method for calculating total memory and resources for LLAP in the Cluster.  We use to use a 'percentage' of the cluster as a starting point for calculating the number of LLAP nodes.  This was a little cryptic.  The new method asks how many 'nodes' you want to run LLAP on.  The assumption now is that LLAP will consume the whole node.  So memory calculations start from the available YARN memory on a node and not a 'percentage' of that memory. |
+
 ## Assumptions
 
 - Tested on:
