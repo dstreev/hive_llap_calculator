@@ -23,8 +23,6 @@ TYPE_REFERENCE = "extended"
 
 # Yarn Sizing
 YARN_MEMORY_PERCENT = 80
-LLAP_PERCENT_OF_CLUSTER = 10
-LLAP_PERCENT_OF_YARN_NODE_MEMORY = 90
 LLAP_CACHE_PERCENTAGE = 50
 
 # Configuration
@@ -57,10 +55,10 @@ SECTIONS = (HOST_ENV, THRESHOLD_ENV, YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTE
 
 # Environment
 WORKER_MEMORY_GB = ["Node Memory Footprint(GB)", TYPE_INPUT, HOST_ENV,
-                    "", 16, 16, (), ""]
+                    "", 32, 32, (), ""]
 WORKER_COUNT = ["Number of Cluster Worker Nodes", TYPE_INPUT, HOST_ENV,
                 "", 30, 30, (), ""]
-WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 8, 8, (), ""]
+WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 4, 4, (), ""]
 
 # Thresholds
 PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
@@ -328,6 +326,11 @@ def run_calc(position):
     # LLAP_DAEMON_HEAP_MEM_MB
     LLAP_DAEMON_HEAP_MEM_MB[position] = (LLAP_DAEMON_CONTAINER_MEM_MB[position] - LLAP_HEADROOM_MEM_MB[position]) * \
                                          (100 - PERCENT_OF_LLAP_FOR_CACHE[position]) / 100
+
+    # This ensures that a minimum of 4Gb per Executor is available in the Daemon Heap.
+    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * 4096:
+        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * 4096
+
 
     # LLAP_CACHE_MEM_MB
     LLAP_CACHE_MEM_MB[position] = LLAP_DAEMON_CONTAINER_MEM_MB[position] - LLAP_DAEMON_HEAP_MEM_MB[position]
@@ -842,7 +845,7 @@ def main():
     #
 
     parser.add_option("-w", "--workers", dest="workers", default="10", help="How many worker nodes in the cluster?")
-    parser.add_option("-m", "--memory", dest="memory", default="16", help="How much memory does each worker node have (GB)?")
+    parser.add_option("-m", "--memory", dest="memory", default="32", help="How much memory does each worker node have (GB)?")
 
     (options, args) = parser.parse_args()
 
