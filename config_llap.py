@@ -747,6 +747,8 @@ def populate_current():
                     try:
                     # set_config(ambariConfig, POS_CUR_VALUE)
                         ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
+                        # Set Calc Values to the same.
+                        ambariConfig[POS_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
                     except:
                         print("Skipping property lookup: " + str(ambariConfig[POS_CUR_VALUE]))
 
@@ -758,6 +760,8 @@ def populate_current():
         raw_input("press enter to continue...")
 
     run_totals_calc(POS_CUR_VALUE)
+    # Reset the Calc Values based on initial Ambari Values.
+    run_calc(POS_VALUE)
 
 
 def pprinttable(rows, fields):
