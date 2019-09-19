@@ -16,6 +16,9 @@ logger = logging.getLogger('LLAPConfig')
 TF = ("true", "false")
 KB = 1024
 
+# SSL_ON = False
+SSL_CMD = ""
+
 TYPE_INPUT = "simple"
 TYPE_CALC = "calc"
 TYPE_REFERENCE = "extended"
@@ -263,9 +266,9 @@ SELECT_SECTION = "Select Section -- : "
 SELECT_ACTION = "Select Action --: "
 SELECT_CONFIG = "Select Config -- : "
 ENTER_RETURN = " enter - Go back"
-AMBARI_CFG_CMD = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} --cluster=${{CLUSTER_NAME}}" + \
-                    " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={0}" + \
-                    " --key={1} --value={2}"
+AMBARI_CFG_CMD = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} {0} --cluster=${{CLUSTER_NAME}}" + \
+                    " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={1}" + \
+                    " --key={2} --value={3}"
 
 cluster = ""
 ambari_accessor_api = None
@@ -601,23 +604,40 @@ def ambari_configs():
 
     pprinttable(AMBARI_CONFIGS, DISPLAY_COLUMNS)
 
-    manual = []
-    for cfg in AMBARI_CONFIGS:
-        if cfg[POS_SECTION[0]] in VALID_AMBARI_SECTIONS:
-            print (AMBARI_CFG_CMD.format(cfg[POS_SECTION[0]][1], cfg[POS_CONFIG[0]], cfg[POS_VALUE[0]]))
-        else:
-            manual.append(cfg)
+    ambaricalls = ambariRestCalls()
+    print ("===================================")
+    print ("  Ambari REST Call Configurations  ")
+    print ("===================================")
+    for line in ambaricalls:
+        print line
 
+    manual = manualCfgs()
     if len(manual) > 0:
         print ("===================================")
         print ("       Manual Configurations       ")
         print ("===================================")
 
-    for cfg in manual:
-        print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC[0]], cfg[POS_VALUE[0]]))
+        for cfg in manual:
+            print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC[0]], cfg[POS_VALUE[0]]))
 
     print ("")
     raw_input("press enter...")
+
+def manualCfgs():
+    manual = []
+    for cfg in AMBARI_CONFIGS:
+        if cfg[POS_SECTION[0]] not in VALID_AMBARI_SECTIONS:
+            manual.append(cfg)
+
+    return manual
+
+def ambariRestCalls():
+    ambariConfigs = []
+    for cfg in AMBARI_CONFIGS:
+        if cfg[POS_SECTION[0]] in VALID_AMBARI_SECTIONS:
+            ambariConfigs.append(AMBARI_CFG_CMD.format(SSL_CMD, cfg[POS_SECTION[0]][1], cfg[POS_CONFIG[0]], cfg[POS_VALUE[0]]))
+
+    return ambariConfigs
 
 
 def report():
@@ -625,8 +645,36 @@ def report():
 
 
 def save():
-    print("Save")
+    out_file_base = raw_input("Enter Filename(without Extension):")
+    myFile = open(out_file_base + ".sh", "w")
 
+    myFile.write("export AMBARI_HOST=<host>\n")
+    myFile.write("export AMBARI_PORT=<port>\n")
+    myFile.write("export CLUSTER_NAME=<clustername>\n")
+
+    for line in ambariRestCalls():
+        myFile.write(line)
+        myFile.write('\n')
+
+    myFile.close();
+
+    myFile = open(out_file_base + ".txt", "w")
+
+    # myFile.writelines(buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS))
+    for line in buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS):
+        myFile.write(line)
+        myFile.write('\n')
+
+    manual = manualCfgs()
+    if len(manual) > 0:
+        for line in manual:
+            myFile.writelines("Manual Configuration: {0} [{1}]".format(line[POS_SHORT_DESC[0]], line[POS_VALUE[0]]))
+            myFile.write('\n')
+
+    myFile.close()
+
+    print("Saved to: " + out_file_base + ".txt - Configuration Grid")
+    print("Saved to: " + out_file_base + ".sh  - Ambari Configuration REST Script")
 
 def change_mode():
     print(chr(27) + "[2J")
@@ -693,7 +741,7 @@ def environment_status():
 def action_loop():
     actions = (
         ("Guided Config", "g"), (), ("Logical Display", "l"), ("Ambari Config List", "a"), (), ("Edit", "e"),
-        # ("Save", "s"),
+        ("Save", "s"),
         (), ("Mode (expose additional settings)", "m"), (), ("Quit", "q"))
 
     def validate(choice):
@@ -907,7 +955,15 @@ def main():
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
+    global SSL_CMD
+
     # options with default value
+    if options.protocol:
+        SSL_CMD += "-s "
+        SSL_CMD += options.protocol
+
+    if options.unsafe:
+        SSL_CMD += " --unsafe"
 
     if not options.credentials_file and (not options.user or not options.password):
         ambari_integration = False
