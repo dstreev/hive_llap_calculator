@@ -35,16 +35,21 @@ HEADER = ["Short Desc", "Type", "Section", "Config", "Value", "Current Value", "
 
 # Positions
 # LOCATION,DISPLAY_ORDER
-POS_SHORT_DESC = [0,1]
-POS_TYPE = [1,2]
-POS_SECTION = [2,2]
-POS_CONFIG = [3,3]
-POS_VALUE = [4,4]
-POS_CUR_VALUE = [5,5]
-POS_OPTIONS = [6,0]
-POS_LONG_DESC = [7,0]
+POS_SHORT_DESC = [0,"Short Desc"]
+POS_TYPE = [1,"Type"]
+POS_SECTION = [2,"Section"]
+POS_CONFIG = [3,"Config"]
+POS_VALUE = [4,"Value"]
+POS_CUR_VALUE = [5,"Current Value"]
+POS_OPTIONS = [6,"Options"]
+POS_LONG_DESC = [7,"Long Desc"]
+POS_DELTA = [8, "Delta"]
 
-DISPLAY_COLUMNS = [POS_SHORT_DESC[0], POS_TYPE[0], POS_SECTION[0], POS_CONFIG[0], POS_VALUE[0], POS_CUR_VALUE[0]]
+ALL_DISPLAY_COLUMNS = [POS_SHORT_DESC,POS_TYPE,POS_SECTION,POS_CONFIG, \
+                       POS_VALUE,POS_CUR_VALUE,POS_OPTIONS,POS_LONG_DESC,POS_DELTA]
+
+DISPLAY_COLUMNS = [POS_SHORT_DESC, POS_TYPE, POS_SECTION, POS_CONFIG, \
+                   POS_VALUE, POS_CUR_VALUE]
 
 # Sections
 YARN_SITE = ("YARN Configuration", "yarn-site")
@@ -61,103 +66,103 @@ SECTIONS = (HOST_ENV, THRESHOLD_ENV, YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTE
 
 # Environment
 WORKER_MEMORY_GB = ["Node Memory Footprint(GB)", TYPE_INPUT, HOST_ENV,
-                    "", 32, 32, (), ""]
+                    "", 32, 32, (), "", 0]
 WORKER_COUNT = ["Number of Cluster Worker Nodes", TYPE_INPUT, HOST_ENV,
-                "", 30, 30, (), ""]
-WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 4, 4, (), ""]
+                "", 30, 30, (), "", 0]
+WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 4, 4, (), "", 0]
 
 # Thresholds
-PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), ""]
+PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), "","na"]
 # PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_CALC, THRESHOLD_ENV, "", 50, None]
 # PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
-PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None, (), ""]
-PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), ""]
-MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), ""]
-LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None, (), ""]
+PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None, (), "","na"]
+PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), "","na"]
+MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), "","na"]
+LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None, (), "","na"]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
-                                                   TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None, (), ""]
+                                                   TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None, (), "","na"]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
-                                          THRESHOLD_ENV, "", 100, None, (), ""]
+                                          THRESHOLD_ENV, "", 100, None, (), "","na"]
 
 # YARN
 YARN_NM_RSRC_MEM_MB = ["Node Manager Memory(MB)", TYPE_CALC, YARN_SITE,
-                       "yarn.nodemanager.resource.memory-mb", 13107, 13107, (), ""]
+                       "yarn.nodemanager.resource.memory-mb", 13107, 13107, (), "", 0]
 YARN_SCH_MAX_ALLOC_MEM_MB = ["Yarn Max Mem Allocation(MB)", TYPE_CALC, YARN_SITE,
-                             "yarn.scheduler.maximum-allocation-mb", 11927, 11927, (), ""]
+                             "yarn.scheduler.maximum-allocation-mb", 11927, 11927, (), "", 0]
 YARN_SCH_MIN_ALLOC_MEM_MB = ["Yarn Min Mem Allocation(MB)", TYPE_REFERENCE, YARN_SITE,
-                             "yarn.scheduler.minimum-allocation-mb", 2048, 2048, (), ""]
+                             "yarn.scheduler.minimum-allocation-mb", 2048, 2048, (), "", 0]
 
-DIVIDER = ["", "", "", "", "", "", "", ""]
-THRESHOLDS =    [" --  Threshold DETAILS -- ", "", "", "", "", "", "", ""]
-CLUSTER_DETAILS =   ["  --  CLUSTER DETAILS -- ", "", "", "", "", "", "", ""]
-YARN_ENV =      ["    --  YARN DETAILS --", "", "", "", "", "", "", ""]
-HIVE_ENV =      ["    --  HIVE DETAILS --", "", "", "", "", "", "", ""]
-TOTALS = ["> Totals", "", "", "", "", "", "", ""]
+DIVIDER = ["", "", "", "", "", "", "", "", ""]
+THRESHOLDS =    [" --  Threshold DETAILS -- ", "", "", "", "", "", "", "", ""]
+CLUSTER_DETAILS =   ["  --  CLUSTER DETAILS -- ", "", "", "", "", "", "", "", ""]
+YARN_ENV =      ["    --  YARN DETAILS --", "", "", "", "", "", "", "", ""]
+HIVE_ENV =      ["    --  HIVE DETAILS --", "", "", "", "", "", "", "", ""]
+TOTALS = ["> Totals", "", "", "", "", "", "", "", ""]
 
 
 # Hive Interactive Site
 HIVE_LLAP_QUEUE = ["YARN Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
-                   "hive.llap.daemon.queue.name", "llap", "llap", (), ""]
+                   "hive.llap.daemon.queue.name", "llap", "llap", (), "","na"]
 TEZ_CONTAINER_SIZE_MB = ["TEZ Container Size", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                         "hive.tez.container.size", KB * 4, KB * 4, (), "Tez container size when LLAP is run with hive.execution.mode=container, which launches container instances for the job."]
+                         "hive.tez.container.size", KB * 4, KB * 4, (), "Tez container size when LLAP is run with hive.execution.mode=container, which launches container instances for the job.",0]
 LLAP_DAEMON_CONTAINER_MEM_MB = ["Daemon Memory(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                                "hive.llap.daemon.yarn.container.mb", 11796, 11796, (), ""]
+                                "hive.llap.daemon.yarn.container.mb", 11796, 11796, (), "", 0]
 LLAP_CACHE_MEM_MB = ["Cache(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                     "hive.llap.io.memory.size", KB * 4, KB * 4, (), ""]
+                     "hive.llap.io.memory.size", KB * 4, KB * 4, (), "", 0]
 LLAP_OBJECT_CACHE_ENABLED = ["Object Cache Enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
                              "hive.llap.object.cache.enabled", "true", "true",
-                             TF, "Cache objects (plans, hashtables, etc) in LLAP"]
+                             TF, "Cache objects (plans, hashtables, etc) in LLAP","na"]
 LLAP_MEMORY_MODE = ["Memory Mode", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                    "hive.llap.io.memory.mode", "cache", "cache", ("cache", "allocator", "none"), ""]
+                    "hive.llap.io.memory.mode", "cache", "cache", ("cache", "allocator", "none"), "","na"]
 LLAP_IO_ENABLED = ["Cache Enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                   "hive.llap.io.enabled", "true", "true", TF, ""]
+                   "hive.llap.io.enabled", "true", "true", TF, "","na"]
 LLAP_IO_ALLOCATOR_NMAP_ENABLED = ["Direct I/O cache enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
                                   "hive.llap.io.allocator.mmap", "false", "false", TF,
-                                  "Whether ORC low-level cache should use memory mapped allocation (direct I/O)"]
+                                  "Whether ORC low-level cache should use memory mapped allocation (direct I/O)","na"]
 LLAP_IO_ALLOCATOR_NMAP_PATH = ["Direct I/O cache path", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                               "hive.llap.io.allocator.mmap.path", "", "", (), ""]
+                               "hive.llap.io.allocator.mmap.path", "", "", (), "","na"]
 
 LLAP_NUM_EXECUTORS_PER_DAEMON = ["Num of Executors", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                                 "hive.llap.daemon.num.executors", 12, 12, (), ""]
+                                 "hive.llap.daemon.num.executors", 12, 12, (), "",0]
 
 LLAP_IO_THREADPOOL = ["I/O Threadpool", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                      "hive.llap.io.threadpool.size", 12, 12, (), ""]
+                      "hive.llap.io.threadpool.size", 12, 12, (), "", 0]
 
 # Hive Interactive Size (Custom)
 LLAP_PREWARMED_ENABLED = ["Prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                          "hive.prewarm.enabled", "false", "false", TF, ""]
+                          "hive.prewarm.enabled", "false", "false", TF, "", "na"]
 LLAP_PREWARM_NUM_CONTAINERS = ["Number of prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                               "hive.prewarm.numcontainers", 1, None, (), ""]
+                               "hive.prewarm.numcontainers", 1, 0, (), "", 1]
 
 # Hive Interactive Env
 LLAP_NUM_NODES = ["Daemon Count", TYPE_INPUT, HIVE_INTERACTIVE_ENV,
-                  "num_llap_nodes", 1, 1, (), ""]
+                  "num_llap_nodes", 1, 1, (), "", 0]
 LLAP_NUM_NODES_ALT = ["Daemon Count(legacy)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                  "num_llap_nodes_for_llap_daemons", 1, 1, (), ""]
+                  "num_llap_nodes_for_llap_daemons", 1, 1, (), "", 0]
 LLAP_CONCURRENCY = ["Query Concurrency", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
-                    "hive.server2.tez.sessions.per.default.queue", 2, 2, (), ""]
+                    "hive.server2.tez.sessions.per.default.queue", 2, 2, (), "", 0]
 LLAP_AM_DAEMON_HEAP_MB = ["AM Heap for Daemons", TYPE_REFERENCE, HIVE_INTERACTIVE_ENV,
-                          "hive_heapsize", 4096, 4096, (), "Could be 2048, but defaults to 4096 in Ambari"]
+                          "hive_heapsize", 4096, 4096, (), "Could be 2048, but defaults to 4096 in Ambari", 0]
 LLAP_HEADROOM_MEM_MB = ["Heap Headroom", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                        "llap_headroom_space", 2048, 2048, (), ""]
+                        "llap_headroom_space", 2048, 2048, (), "", 0]
 LLAP_DAEMON_HEAP_MEM_MB = ["Daemon Heap size(MB)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                           "llap_heap_size", 8192, 8192, (), ""]
+                           "llap_heap_size", 8192, 8192, (), "", 0]
 
 # TEZ Interactive site
 TEZ_AM_MEM_MB = ["TEZ AM Container size(MB) DAG Submission", TYPE_REFERENCE, TEZ_INTERACTIVE_SITE,
-                 "tez.am.resource.memory.mb", 4 * KB, 4 * KB, (), ""]
+                 "tez.am.resource.memory.mb", 4 * KB, 4 * KB, (), "", 0]
 
 # Total Section
 TOTAL_MEM_FOOTPRINT = ["Total Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                       "", 0, 0, (), ""]
+                       "", 0, 0, (), "", 0]
 TOTAL_LLAP_DAEMON_FOOTPRINT = ["Total LLAP Daemon Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                               "", 0, 0, (), ""]
+                               "", 0, 0, (), "", 0]
 TOTAL_LLAP_OTHER_FOOTPRINT = ["Total LLAP Other Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                              "", 0, 0, (), ""]
+                              "", 0, 0, (), "", 0]
 TOTAL_LLAP_MEM_FOOTPRINT = ["Total LLAP Memory Footprint", TYPE_CALC, CLUSTER_ENV,
-                            "", 0, 0, (), ""]
+                            "", 0, 0, (), "", 0]
 LLAP_QUEUE_MIN_REQUIREMENT = ["LLAP Minimum YARN Queue Capacity % Requirement", TYPE_CALC, CLUSTER_ENV,
-                              "", 0, 0, (), ""]
+                              "", 0, 0, (), "", 0]
 
 LOGICAL_CONFIGS = [
     CLUSTER_DETAILS,
@@ -263,12 +268,16 @@ AMBARI_CONFIGS = [
 
 SELECT_TASK = "Select Task -- : "
 SELECT_SECTION = "Select Section -- : "
+SELECT_MODE = "Select Mode -- : "
 SELECT_ACTION = "Select Action --: "
 SELECT_CONFIG = "Select Config -- : "
-ENTER_RETURN = " enter - Go back"
+ENTER_RETURN = " <enter> - to go back"
+ENTER_CONTINUE = " <enter> - to continue"
 AMBARI_CFG_CMD = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} {0} --cluster=${{CLUSTER_NAME}}" + \
                     " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={1}" + \
                     " --key={2} --value={3}"
+
+ERROR_MESSAGES = []
 
 cluster = ""
 ambari_accessor_api = None
@@ -373,7 +382,47 @@ def run_totals_calc(position):
     # Total LLAP Yarn Queue Requirement (Percent of Root Queue)
     LLAP_QUEUE_MIN_REQUIREMENT[position] = round(float(TOTAL_LLAP_MEM_FOOTPRINT[position]) / \
                                                   TOTAL_MEM_FOOTPRINT[position] * 100, 2)
+    calc_deltas()
+    check_for_issues()
 
+def calc_deltas():
+    WORKER_MEMORY_GB[POS_DELTA[0]] = WORKER_MEMORY_GB[POS_VALUE[0]] - WORKER_MEMORY_GB[POS_CUR_VALUE[0]]
+    WORKER_COUNT[POS_DELTA[0]] = WORKER_COUNT[POS_VALUE[0]] - WORKER_COUNT[POS_CUR_VALUE[0]]
+    WORKER_CORES[POS_DELTA[0]] = WORKER_CORES[POS_VALUE[0]] - WORKER_CORES[POS_CUR_VALUE[0]]
+    YARN_NM_RSRC_MEM_MB[POS_DELTA[0]] = YARN_NM_RSRC_MEM_MB[POS_VALUE[0]] - YARN_NM_RSRC_MEM_MB[POS_CUR_VALUE[0]]
+    YARN_SCH_MAX_ALLOC_MEM_MB[POS_DELTA[0]] = YARN_SCH_MAX_ALLOC_MEM_MB[POS_VALUE[0]] - YARN_SCH_MAX_ALLOC_MEM_MB[POS_CUR_VALUE[0]]
+    YARN_SCH_MIN_ALLOC_MEM_MB[POS_DELTA[0]] = YARN_SCH_MIN_ALLOC_MEM_MB[POS_VALUE[0]] - YARN_SCH_MIN_ALLOC_MEM_MB[POS_CUR_VALUE[0]]
+    TOTAL_MEM_FOOTPRINT[POS_DELTA[0]] = TOTAL_MEM_FOOTPRINT[POS_VALUE[0]] - TOTAL_MEM_FOOTPRINT[POS_CUR_VALUE[0]]
+
+    LLAP_NUM_NODES[POS_DELTA[0]] = LLAP_NUM_NODES[POS_VALUE[0]] - LLAP_NUM_NODES[POS_CUR_VALUE[0]]
+    LLAP_NUM_NODES_ALT[POS_DELTA[0]] = LLAP_NUM_NODES_ALT[POS_VALUE[0]] - LLAP_NUM_NODES_ALT[POS_CUR_VALUE[0]]
+    LLAP_CONCURRENCY[POS_DELTA[0]] = LLAP_CONCURRENCY[POS_VALUE[0]] - LLAP_CONCURRENCY[POS_CUR_VALUE[0]]
+    TEZ_AM_MEM_MB[POS_DELTA[0]] = TEZ_AM_MEM_MB[POS_VALUE[0]] - TEZ_AM_MEM_MB[POS_CUR_VALUE[0]]
+    LLAP_NUM_EXECUTORS_PER_DAEMON[POS_DELTA[0]] = LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] - LLAP_NUM_EXECUTORS_PER_DAEMON[POS_CUR_VALUE[0]]
+    LLAP_AM_DAEMON_HEAP_MB[POS_DELTA[0]] = LLAP_AM_DAEMON_HEAP_MB[POS_VALUE[0]] - LLAP_AM_DAEMON_HEAP_MB[POS_CUR_VALUE[0]]
+    LLAP_DAEMON_CONTAINER_MEM_MB[POS_DELTA[0]] = LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] - LLAP_DAEMON_CONTAINER_MEM_MB[POS_CUR_VALUE[0]]
+    LLAP_DAEMON_HEAP_MEM_MB[POS_DELTA[0]] = LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] - LLAP_DAEMON_HEAP_MEM_MB[POS_CUR_VALUE[0]]
+    LLAP_HEADROOM_MEM_MB[POS_DELTA[0]] = LLAP_HEADROOM_MEM_MB[POS_VALUE[0]] - LLAP_HEADROOM_MEM_MB[POS_CUR_VALUE[0]]
+    LLAP_CACHE_MEM_MB[POS_DELTA[0]] = LLAP_CACHE_MEM_MB[POS_VALUE[0]] - LLAP_CACHE_MEM_MB[POS_CUR_VALUE[0]]
+
+    LLAP_IO_THREADPOOL[POS_DELTA[0]] = LLAP_IO_THREADPOOL[POS_VALUE[0]] - LLAP_IO_THREADPOOL[POS_CUR_VALUE[0]]
+    TEZ_CONTAINER_SIZE_MB[POS_DELTA[0]] = TEZ_CONTAINER_SIZE_MB[POS_VALUE[0]] - TEZ_CONTAINER_SIZE_MB[POS_CUR_VALUE[0]]
+    LLAP_PREWARM_NUM_CONTAINERS[POS_DELTA[0]] = LLAP_PREWARM_NUM_CONTAINERS[POS_VALUE[0]] - LLAP_PREWARM_NUM_CONTAINERS[POS_CUR_VALUE[0]]
+    TOTAL_LLAP_DAEMON_FOOTPRINT[POS_DELTA[0]] = TOTAL_LLAP_DAEMON_FOOTPRINT[POS_VALUE[0]] - TOTAL_LLAP_DAEMON_FOOTPRINT[POS_CUR_VALUE[0]]
+    TOTAL_LLAP_OTHER_FOOTPRINT[POS_DELTA[0]] = TOTAL_LLAP_OTHER_FOOTPRINT[POS_VALUE[0]] - TOTAL_LLAP_OTHER_FOOTPRINT[POS_CUR_VALUE[0]]
+    TOTAL_LLAP_MEM_FOOTPRINT[POS_DELTA[0]] = TOTAL_LLAP_MEM_FOOTPRINT[POS_VALUE[0]] - TOTAL_LLAP_MEM_FOOTPRINT[POS_CUR_VALUE[0]]
+    LLAP_QUEUE_MIN_REQUIREMENT[POS_DELTA[0]] = LLAP_QUEUE_MIN_REQUIREMENT[POS_VALUE[0]] - LLAP_QUEUE_MIN_REQUIREMENT[POS_CUR_VALUE[0]]
+
+def check_for_issues():
+    del ERROR_MESSAGES[:]
+    if LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]:
+        message = [LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
+                   " can't be less than " + LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+                   str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]),
+                   ["Decrease " + LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]], \
+                    "Decrease " + LLAP_MIN_MB_TASK_ALLOCATION[POS_SHORT_DESC[0]]]]
+        ERROR_MESSAGES.append(message)
 
 
 def get_current(selection, lst):
@@ -525,14 +574,14 @@ def change_config(config):
 def guided_loop():
     # Find configs in Section that are "TYPE_INPUT"
     print(chr(27) + "[2J")
+    print ("")
+    environment_status()
     print ("===================================")
     print ("      Guided Configuration      ")
     print ("")
     print ("- Enter value for each setting.")
     print ("- Press 'enter' to keep current.")
     print ("")
-    print ("                    * current mode * ")
-    print ("                     " + str(MODE))
     print ("===================================")
 
     guided_configs = []
@@ -550,10 +599,10 @@ def guided_loop():
 def edit_loop():
     while True:
         print(chr(27) + "[2J")
+        print ("")
+        environment_status()
         print ("===================================")
         print ("        Edit Configurations        ")
-        print ("                    * current mode * ")
-        print ("                     " + str(MODE))
         print ("===================================")
 
         # List Sections
@@ -593,6 +642,8 @@ def logical_display():
     pprinttable(LOGICAL_CONFIGS, DISPLAY_COLUMNS)
 
     print ("")
+    environment_status()
+    print ("")
     raw_input("press enter...")
 
 def ambari_configs():
@@ -608,8 +659,11 @@ def ambari_configs():
     print ("===================================")
     print ("  Ambari REST Call Configurations  ")
     print ("===================================")
-    for line in ambaricalls:
-        print line
+    if ERROR_MESSAGES > 0:
+        environment_status()
+    else:
+        for line in ambaricalls:
+            print line
 
     manual = manualCfgs()
     if len(manual) > 0:
@@ -640,105 +694,140 @@ def ambariRestCalls():
     return ambariConfigs
 
 
-def report():
-    print("Report")
-
-
 def save():
-    out_file_base = raw_input("Enter Filename(without Extension):")
-    myFile = open(out_file_base + ".sh", "w")
+    if ERROR_MESSAGES > 0:
+        environment_status()
+        print (raw_input(ENTER_CONTINUE))
+    else:
+        out_file_base = raw_input("Enter Filename(without Extension):")
+        myFile = open(out_file_base + ".sh", "w")
 
-    myFile.write("export AMBARI_HOST=<host>\n")
-    myFile.write("export AMBARI_PORT=<port>\n")
-    myFile.write("export CLUSTER_NAME=<clustername>\n")
+        myFile.write("export AMBARI_HOST=<host>\n")
+        myFile.write("export AMBARI_PORT=<port>\n")
+        myFile.write("export CLUSTER_NAME=<clustername>\n")
 
-    for line in ambariRestCalls():
-        myFile.write(line)
-        myFile.write('\n')
-
-    myFile.close();
-
-    myFile = open(out_file_base + ".txt", "w")
-
-    # myFile.writelines(buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS))
-    for line in buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS):
-        myFile.write(line)
-        myFile.write('\n')
-
-    manual = manualCfgs()
-    if len(manual) > 0:
-        for line in manual:
-            myFile.writelines("Manual Configuration: {0} [{1}]".format(line[POS_SHORT_DESC[0]], line[POS_VALUE[0]]))
+        for line in ambariRestCalls():
+            myFile.write(line)
             myFile.write('\n')
 
-    myFile.close()
+        myFile.close();
 
-    print("Saved to: " + out_file_base + ".txt - Configuration Grid")
-    print("Saved to: " + out_file_base + ".sh  - Ambari Configuration REST Script")
+        myFile = open(out_file_base + ".txt", "w")
+
+        # myFile.writelines(buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS))
+        for line in buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS):
+            myFile.write(line)
+            myFile.write('\n')
+
+        manual = manualCfgs()
+        if len(manual) > 0:
+            for line in manual:
+                myFile.writelines("Manual Configuration: {0} [{1}]".format(line[POS_SHORT_DESC[0]], line[POS_VALUE[0]]))
+                myFile.write('\n')
+
+        myFile.close()
+        print ("")
+        print ("Saved to: " + out_file_base + ".txt - Configuration Grid")
+        print ("Saved to: " + out_file_base + ".sh  - Ambari Configuration REST Script")
+        print ("")
+        print (raw_input(ENTER_CONTINUE))
+
+def getDisplayColumns():
+    rtn = []
+    for item in DISPLAY_COLUMNS:
+        rtn.append(item[1])
+    return rtn
+
 
 def change_mode():
-    print(chr(27) + "[2J")
-    print ("===================================")
-    print ("            Change Mode       ")
-    print ("                    * current mode *")
-    print ("                     " + str(MODE))
-    print ("===================================")
-    print (" 1 - Simple Mode")
-    print (" 2 - Reference Mode(expose additional settings)")
-    print (" 3 - Short Output")
-    print (" 4 - Default Output")
-    print (" 5 - Long Output")
-    print (ENTER_RETURN)
-    print ("===================================")
+    while True:
+        print(chr(27) + "[2J")
+        print ("")
+        environment_status()
+        print ("===================================")
+        print ("            Change Mode       ")
+        print ("===================================")
+        print (" 1 - Simple Mode")
+        print (" 2 - Reference Mode(expose additional settings)")
+        print ("")
+        print ("===================================")
+        print ("    Toggle Columns for Display")
+        print ("===================================")
+        print (" 3 - Short Desc")
+        print (" 4 - Type")
+        print (" 5 - Section")
+        print (" 6 - Config")
+        print (" 7 - Value")
+        print (" 8 - Current Value")
+        print (" 9 - Options")
+        print (" 10 - Long Desc")
+        print (" 11 - Delta")
+        print ("===================================")
+        print (ENTER_RETURN)
 
-    selection = raw_input("-- Select Mode -- : ")
+        try:
+            raw_selection = raw_input(SELECT_MODE)
+            if raw_selection == "":
+                break
+            selection = int(raw_selection)
+        except ValueError:
+            break
 
-    if selection is not None and selection in ("1", "2","3","4","5"):
-        if selection == "1":
-            if TYPE_REFERENCE in MODE:
-                MODE.remove(TYPE_REFERENCE)
-        elif selection == "2":
-            if TYPE_REFERENCE not in MODE:
-                MODE.append(TYPE_REFERENCE)
-        elif selection == "3":
-            del DISPLAY_COLUMNS[:]
-            DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
-            DISPLAY_COLUMNS.append(POS_SECTION[0])
-            DISPLAY_COLUMNS.append(POS_CONFIG[0])
-            DISPLAY_COLUMNS.append(POS_VALUE[0])
-        elif selection == "4":
-            del DISPLAY_COLUMNS[:]
-            DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
-            DISPLAY_COLUMNS.append(POS_TYPE[0])
-            DISPLAY_COLUMNS.append(POS_SECTION[0])
-            DISPLAY_COLUMNS.append(POS_CONFIG[0])
-            DISPLAY_COLUMNS.append(POS_VALUE[0])
-            DISPLAY_COLUMNS.append(POS_CUR_VALUE[0])
-        elif selection == "5":
-            del DISPLAY_COLUMNS[:]
-            DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
-            DISPLAY_COLUMNS.append(POS_TYPE[0])
-            DISPLAY_COLUMNS.append(POS_SECTION[0])
-            DISPLAY_COLUMNS.append(POS_CONFIG[0])
-            DISPLAY_COLUMNS.append(POS_VALUE[0])
-            DISPLAY_COLUMNS.append(POS_CUR_VALUE[0])
-            DISPLAY_COLUMNS.append(POS_OPTIONS[0])
-            DISPLAY_COLUMNS.append(POS_LONG_DESC[0])
+        if selection is not None and selection in (1,2):
+            if selection == 1:
+                if TYPE_REFERENCE in MODE:
+                    MODE.remove(TYPE_REFERENCE)
+            else:
+                if TYPE_REFERENCE not in MODE:
+                    MODE.append(TYPE_REFERENCE)
+        elif selection is not None and selection in (3,4,5,6,7,8,9,10,11):
+            selectionadjusted = selection - 3
+            for i in ALL_DISPLAY_COLUMNS:
+                if i[0] == selectionadjusted:
+                    if len(DISPLAY_COLUMNS) == 0:
+                        DISPLAY_COLUMNS.append(i)
+                    elif i in DISPLAY_COLUMNS:
+                        DISPLAY_COLUMNS.remove(i)
+                    else:
+                        spot = i[0]
+                        iter = 0
+                        for i2 in DISPLAY_COLUMNS:
+                            if i2[0] > spot:
+                                DISPLAY_COLUMNS.insert(iter,i)
+                                break
+                            else:
+                                iter += 1
+                                if iter >= len(DISPLAY_COLUMNS):
+                                    DISPLAY_COLUMNS.insert(iter,i)
+                                    break
         else:
-            return
-    elif selection is None:
-        return
-    else:
-        print ("Invalid Mode. Current Mode: " + str(MODE))
+            break
+        print ("________________________________")
+        print ("")
 
-    print ("________________________________")
-    print ("")
+def getErrors():
+    ERRORS = []
+    if len(ERROR_MESSAGES) > 0:
+        ERRORS.append ("********************* ERRORS *********************")
+        for message in ERROR_MESSAGES:
+            ERRORS.append ("Issue: ")
+            ERRORS.append ("\t\t" + message[0])
+            ERRORS.append ("Options:")
+            for opt in message[1]:
+                ERRORS.append ("\t\t" + opt)
+            ERRORS.append("    ------------------------")
+        ERRORS.append ("**************************************************")
+    return ERRORS
 
 
 def environment_status():
-    status = "Ambari Integration On:\t("+str(ambari_integration)+")\nCurrent mode:\t\t*"+str(MODE)+"*"
-    return status
-
+    print ("Ambari Integration On:\t("+str(ambari_integration)+")")
+    print ("         Current mode:\t*"+str(MODE)+"*")
+    print ("      Display Columns:\t" + str(getDisplayColumns()))
+    lclErrors = getErrors()
+    if len(lclErrors) > 0:
+        for line in lclErrors:
+            print (line)
 
 def action_loop():
     actions = (
@@ -751,9 +840,10 @@ def action_loop():
             if len(action) > 1 and choice == action[1]:
                 return True
     print(chr(27) + "[2J")
+    print ("")
+    environment_status()
     print ("===================================")
     print ("         MAIN Action Menu          ")
-    print environment_status()
     print ("===================================")
     for action in actions:
         if len(action)>1:
@@ -785,9 +875,6 @@ def action_loop():
             return True
         elif selection == "m":
             change_mode()
-            return True
-        elif selection == "r":
-            report()
             return True
         else:
             return True
@@ -858,33 +945,33 @@ def buildtable(rows, fields):
 
     if len(rows) > 0:
         # headers = HEADER._fields
-        headers = HEADER
+        # headers = HEADER
         lens = []
         for field in fields:
-            lens.append(len(headers[field]))
+            lens.append(len(field[1]))
 
         for row in rows:
             inc = 0
             for field in fields:
-                if isinstance(row[field], (int, float, long)):
+                if isinstance(row[field[0]], (int, float, long)):
                     if lens[inc] < 16:
                         lens[inc] = 16
-                elif isinstance(row[field], (list, tuple)):
+                elif isinstance(row[field[0]], (list, tuple)):
                     size = 2
-                    for i in range(len(row[field])):
-                        size += len(row[field][i]) + 3
+                    for i in range(len(row[field[0]])):
+                        size += len(row[field[0]][i]) + 3
                     if size > lens[inc]:
                         lens[inc] = size
                 else:
-                    if row[field] is not None and (len(row[field]) > lens[inc]):
-                        lens[inc] = len(row[field])
+                    if row[field[0]] is not None and (len(row[field[0]]) > lens[inc]):
+                        lens[inc] = len(row[field[0]])
                 inc += 1
 
         headerRowSeparator = ""
         headerRow = ""
         for loc in range(len(fields)):
             headerRowSeparator = headerRowSeparator + "|" + "=" * (lens[loc]+1)
-            headerRow = headerRow + "| " + center(headers[fields[loc]], lens[loc])
+            headerRow = headerRow + "| " + center([fields[loc][1]], lens[loc])
 
         headerRowSeparator = headerRowSeparator + "|"
         headerRow = headerRow + "|"
@@ -900,10 +987,10 @@ def buildtable(rows, fields):
             inc = 0
             recordRow = ""
             for field in fields:
-                if isinstance(row[field], int) or isinstance(row[field], float) or isinstance(row[field], long):
-                    recordRow = recordRow + "| " + right(row[field], lens[inc])
+                if isinstance(row[field[0]], int) or isinstance(row[field[0]], float) or isinstance(row[field[0]], long):
+                    recordRow = recordRow + "| " + right(row[field[0]], lens[inc])
                 else:
-                    recordRow = recordRow + "| " + left(row[field], lens[inc])
+                    recordRow = recordRow + "| " + left(row[field[0]], lens[inc])
                 inc += 1
             recordRow = recordRow + "|"
 
