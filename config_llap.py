@@ -31,14 +31,17 @@ LLAP_CACHE_PERCENTAGE = 50
 HEADER = ["Short Desc", "Type", "Section", "Config", "Value", "Current Value", "Options", "Long Desc"]
 
 # Positions
-POS_SHORT_DESC = 0
-POS_TYPE = 1
-POS_SECTION = 2
-POS_CONFIG = 3
-POS_VALUE = 4
-POS_CUR_VALUE = 5
-POS_OPTIONS = 6
-POS_LONG_DESC = 7
+# LOCATION,DISPLAY_ORDER
+POS_SHORT_DESC = [0,1]
+POS_TYPE = [1,2]
+POS_SECTION = [2,2]
+POS_CONFIG = [3,3]
+POS_VALUE = [4,4]
+POS_CUR_VALUE = [5,5]
+POS_OPTIONS = [6,0]
+POS_LONG_DESC = [7,0]
+
+DISPLAY_COLUMNS = [POS_SHORT_DESC[0], POS_TYPE[0], POS_SECTION[0], POS_CONFIG[0], POS_VALUE[0], POS_CUR_VALUE[0]]
 
 # Sections
 YARN_SITE = ("YARN Configuration", "yarn-site")
@@ -61,17 +64,17 @@ WORKER_COUNT = ["Number of Cluster Worker Nodes", TYPE_INPUT, HOST_ENV,
 WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 4, 4, (), ""]
 
 # Thresholds
-PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
+PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), ""]
 # PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_CALC, THRESHOLD_ENV, "", 50, None]
 # PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
-PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None]
-PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
-MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None]
-LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None]
+PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None, (), ""]
+PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), ""]
+MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), ""]
+LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None, (), ""]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
-                                                   TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None]
+                                                   TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None, (), ""]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
-                                          THRESHOLD_ENV, "", 100, None]
+                                          THRESHOLD_ENV, "", 100, None, (), ""]
 
 # YARN
 YARN_NM_RSRC_MEM_MB = ["Node Manager Memory(MB)", TYPE_CALC, YARN_SITE,
@@ -400,7 +403,7 @@ def filtered_sections():
     f_sections = []
     for section in SECTIONS:
         for config in LOGICAL_CONFIGS:
-            if config[POS_SECTION] == section and config[POS_TYPE] in MODE:
+            if config[POS_SECTION[0]] == section and config[POS_TYPE[0]] in MODE:
                 f_sections.append(section)
                 break
 
@@ -449,7 +452,7 @@ def section_loop(selection):
         # Find configs in Section that are "TYPE_INPUT"
         section_configs = []
         for config in LOGICAL_CONFIGS:
-            if isinstance(config[POS_SECTION], tuple) and config[POS_SECTION][1] == section_choice[1] and config[POS_TYPE] in MODE:
+            if isinstance(config[POS_SECTION[0]], tuple) and config[POS_SECTION[0]][1] == section_choice[1] and config[POS_TYPE[0]] in MODE:
                 section_configs.append(config)
 
         config = select_config(section_choice, section_configs)
@@ -460,7 +463,7 @@ def section_loop(selection):
         if not change_config(config):
             return True
         else:
-            run_calc(POS_VALUE)
+            run_calc(POS_VALUE[0])
 
 
 def select_config(section, section_configs):
@@ -472,7 +475,7 @@ def select_config(section, section_configs):
     print ("===================================")
     inc = 1
     for config in section_configs:
-        print (" {0} - {1}: [{2}]".format(inc, config[POS_SHORT_DESC], config[POS_VALUE]))
+        print (" {0} - {1}: [{2}]".format(inc, config[POS_SHORT_DESC[0]], config[POS_VALUE[0]]))
         inc += 1
 
     print (ENTER_RETURN)
@@ -502,16 +505,16 @@ def change_config(config):
     # print ("change")
 
     try:
-        raw_value = raw_input(">>> {0} \"{1}\" [{2}]: ".format(config[POS_SHORT_DESC], config[POS_CONFIG], config[POS_VALUE]))
+        raw_value = raw_input(">>> {0} \"{1}\" [{2}]: ".format(config[POS_SHORT_DESC[0]], config[POS_CONFIG[0]], config[POS_VALUE[0]]))
 
         if raw_value == "":
             return True
-        new_value = convert(raw_value, config[POS_VALUE])
+        new_value = convert(raw_value, config[POS_VALUE[0]])
     except:
         # print ("Error Setting Value, try again. Most likely a bad conversion.")
         return False
 
-    config[POS_VALUE] = new_value
+    config[POS_VALUE[0]] = new_value
 
     return True
 
@@ -531,13 +534,13 @@ def guided_loop():
 
     guided_configs = []
     for config in LOGICAL_CONFIGS:
-        if config[POS_TYPE] in MODE:
+        if config[POS_TYPE[0]] in MODE:
             guided_configs.append(config)
 
     for config in guided_configs:
         change_config(config)
 
-    run_calc(POS_VALUE)
+    run_calc(POS_VALUE[0])
     logical_display()
 
 
@@ -581,27 +584,27 @@ def edit_loop():
 
 
 def logical_display():
-    run_calc(POS_VALUE)
+    run_calc(POS_VALUE[0])
 
     global LOGICAL_CONFIGS
-    pprinttable(LOGICAL_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_SECTION, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
+    pprinttable(LOGICAL_CONFIGS, DISPLAY_COLUMNS)
 
     print ("")
     raw_input("press enter...")
 
 def ambari_configs():
-    run_calc(POS_VALUE)
+    run_calc(POS_VALUE[0])
     print(chr(27) + "[2J")
     print ("===================================")
     print ("       Ambari Configurations       ")
     print ("===================================")
 
-    pprinttable(AMBARI_CONFIGS, [POS_SHORT_DESC, POS_TYPE, POS_CONFIG, POS_VALUE, POS_CUR_VALUE])
+    pprinttable(AMBARI_CONFIGS, DISPLAY_COLUMNS)
 
     manual = []
     for cfg in AMBARI_CONFIGS:
-        if cfg[POS_SECTION] in VALID_AMBARI_SECTIONS:
-            print (AMBARI_CFG_CMD.format(cfg[POS_SECTION][1], cfg[POS_CONFIG], cfg[POS_VALUE]))
+        if cfg[POS_SECTION[0]] in VALID_AMBARI_SECTIONS:
+            print (AMBARI_CFG_CMD.format(cfg[POS_SECTION[0]][1], cfg[POS_CONFIG[0]], cfg[POS_VALUE[0]]))
         else:
             manual.append(cfg)
 
@@ -611,7 +614,7 @@ def ambari_configs():
         print ("===================================")
 
     for cfg in manual:
-        print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC], cfg[POS_VALUE]))
+        print ("Manual Configuration: {0} [{1}]".format(cfg[POS_SHORT_DESC[0]], cfg[POS_VALUE[0]]))
 
     print ("")
     raw_input("press enter...")
@@ -634,16 +637,45 @@ def change_mode():
     print ("===================================")
     print (" 1 - Simple Mode")
     print (" 2 - Reference Mode(expose additional settings)")
+    print (" 3 - Short Output")
+    print (" 4 - Default Output")
+    print (" 5 - Long Output")
     print (ENTER_RETURN)
     print ("===================================")
 
     selection = raw_input("-- Select Mode -- : ")
 
-    if selection is not None and selection in ("1", "2"):
+    if selection is not None and selection in ("1", "2","3","4","5"):
         if selection == "1":
             MODE.remove(TYPE_REFERENCE)
-        else:
+        elif selection == "2":
             MODE.append(TYPE_REFERENCE)
+        elif selection == "3":
+            del DISPLAY_COLUMNS[:]
+            DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
+            DISPLAY_COLUMNS.append(POS_SECTION[0])
+            DISPLAY_COLUMNS.append(POS_CONFIG[0])
+            DISPLAY_COLUMNS.append(POS_VALUE[0])
+        elif selection == "4":
+            del DISPLAY_COLUMNS[:]
+            DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
+            DISPLAY_COLUMNS.append(POS_TYPE[0])
+            DISPLAY_COLUMNS.append(POS_SECTION[0])
+            DISPLAY_COLUMNS.append(POS_CONFIG[0])
+            DISPLAY_COLUMNS.append(POS_VALUE[0])
+            DISPLAY_COLUMNS.append(POS_CUR_VALUE[0])
+        elif selection == "5":
+            del DISPLAY_COLUMNS[:]
+            DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
+            DISPLAY_COLUMNS.append(POS_TYPE[0])
+            DISPLAY_COLUMNS.append(POS_SECTION[0])
+            DISPLAY_COLUMNS.append(POS_CONFIG[0])
+            DISPLAY_COLUMNS.append(POS_VALUE[0])
+            DISPLAY_COLUMNS.append(POS_CUR_VALUE[0])
+            DISPLAY_COLUMNS.append(POS_OPTIONS[0])
+            DISPLAY_COLUMNS.append(POS_LONG_DESC[0])
+        else:
+            return
     elif selection is None:
         return
     else:
@@ -745,28 +777,35 @@ def populate_current():
 
         for configs in VALID_AMBARI_SECTIONS:
             for ambariConfig in AMBARI_CONFIGS:
-                if ambariConfig[POS_SECTION][1] == scKey:
+                if ambariConfig[POS_SECTION[0]][1] == scKey:
                     try:
-                    # set_config(ambariConfig, POS_CUR_VALUE)
-                        ambariConfig[POS_CUR_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
+                    # set_config(ambariConfig, POS_CUR_VALUE[0])
+                        ambariConfig[POS_CUR_VALUE[0]] = convert(section_config['properties'][ambariConfig[POS_CONFIG[0]]], ambariConfig[POS_CUR_VALUE[0]])
                         # Set Calc Values to the same.
-                        ambariConfig[POS_VALUE] = convert(section_config['properties'][ambariConfig[POS_CONFIG]], ambariConfig[POS_CUR_VALUE])
+                        ambariConfig[POS_VALUE[0]] = convert(section_config['properties'][ambariConfig[POS_CONFIG[0]]], ambariConfig[POS_CUR_VALUE[0]])
                     except:
-                        print("Skipping property lookup: " + str(ambariConfig[POS_CUR_VALUE]))
+                        print("Skipping property lookup: " + str(ambariConfig[POS_CUR_VALUE[0]]))
 
-    if LLAP_NUM_NODES[POS_CUR_VALUE] != LLAP_NUM_NODES_ALT[POS_CUR_VALUE]:
+    if LLAP_NUM_NODES[POS_CUR_VALUE[0]] != LLAP_NUM_NODES_ALT[POS_CUR_VALUE[0]]:
         print ("WARNING: In your current Ambari Configuration, similar legacy configurations are not in Sync.  These need to be in sync!!!!\n\t" +
-               LLAP_NUM_NODES[POS_CONFIG] + ":" + str(LLAP_NUM_NODES[POS_CUR_VALUE]) + "\n\t" +
-               LLAP_NUM_NODES_ALT[POS_CONFIG] + ":" + str(LLAP_NUM_NODES_ALT[POS_CUR_VALUE]) +
+               LLAP_NUM_NODES[POS_CONFIG[0]] + ":" + str(LLAP_NUM_NODES[POS_CUR_VALUE[0]]) + "\n\t" +
+               LLAP_NUM_NODES_ALT[POS_CONFIG[0]] + ":" + str(LLAP_NUM_NODES_ALT[POS_CUR_VALUE[0]]) +
                "\nOur calculations for the current configuration may be off until these are corrected.")
         raw_input("press enter to continue...")
 
-    run_totals_calc(POS_CUR_VALUE)
+    run_totals_calc(POS_CUR_VALUE[0])
     # Reset the Calc Values based on initial Ambari Values.
-    run_calc(POS_VALUE)
+    run_calc(POS_VALUE[0])
 
 
 def pprinttable(rows, fields):
+    output = buildtable(rows, fields)
+    for line in output:
+        print line
+
+def buildtable(rows, fields):
+    str_list = []
+
     if len(rows) > 0:
         # headers = HEADER._fields
         headers = HEADER
@@ -800,9 +839,12 @@ def pprinttable(rows, fields):
         headerRowSeparator = headerRowSeparator + "|"
         headerRow = headerRow + "|"
 
-        print headerRowSeparator
-        print headerRow
-        print headerRowSeparator
+        str_list.append(headerRowSeparator)
+        # print headerRowSeparator
+        str_list.append(headerRow)
+        # print headerRow
+        str_list.append(headerRowSeparator)
+        # print headerRowSeparator
 
         for row in rows:
             inc = 0
@@ -815,9 +857,12 @@ def pprinttable(rows, fields):
                 inc += 1
             recordRow = recordRow + "|"
 
-            print recordRow
+            str_list.append(recordRow)
+            # print recordRow
 
-        print headerRowSeparator
+        str_list.append(headerRowSeparator)
+        # print headerRowSeparator
+    return str_list
 
 
 def main():
@@ -896,11 +941,11 @@ def main():
     protocol = options.protocol
 
     if options.workers:
-        WORKER_COUNT[POS_VALUE] = int(options.workers)
-        WORKER_COUNT[POS_CUR_VALUE] = int(options.workers)
+        WORKER_COUNT[POS_VALUE[0]] = int(options.workers)
+        WORKER_COUNT[POS_CUR_VALUE[0]] = int(options.workers)
     if options.memory:
-        WORKER_MEMORY_GB[POS_VALUE] = int(options.memory)
-        WORKER_MEMORY_GB[POS_CUR_VALUE] = int(options.memory)
+        WORKER_MEMORY_GB[POS_VALUE[0]] = int(options.memory)
+        WORKER_MEMORY_GB[POS_CUR_VALUE[0]] = int(options.memory)
 
     #options without default value
     if None in [options.host, options.cluster]:
@@ -919,7 +964,7 @@ def main():
         populate_current()
 
     # Setup Base defaults
-    run_calc(POS_VALUE)
+    run_calc(POS_VALUE[0])
 
     while True:
         if not action_loop():
