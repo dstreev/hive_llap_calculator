@@ -695,9 +695,11 @@ def change_mode():
 
     if selection is not None and selection in ("1", "2","3","4","5"):
         if selection == "1":
-            MODE.remove(TYPE_REFERENCE)
+            if TYPE_REFERENCE in MODE:
+                MODE.remove(TYPE_REFERENCE)
         elif selection == "2":
-            MODE.append(TYPE_REFERENCE)
+            if TYPE_REFERENCE not in MODE:
+                MODE.append(TYPE_REFERENCE)
         elif selection == "3":
             del DISPLAY_COLUMNS[:]
             DISPLAY_COLUMNS.append(POS_SHORT_DESC[0])
