@@ -66,7 +66,8 @@ PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", T
 # PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
 PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None]
 PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None]
-THRESHOLD_MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None]
+MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None]
+LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
                                                    TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
@@ -162,11 +163,12 @@ LOGICAL_CONFIGS = [
     PERCENT_OF_HOST_MEM_FOR_YARN,
     # PERCENT_OF_CLUSTER_FOR_LLAP,
     # PERCENT_OF_NODE_FOR_LLAP_MEM,
+    LLAP_MIN_MB_TASK_ALLOCATION,
     PERCENT_OF_LLAP_FOR_CACHE,
     PERCENT_OF_CORES_FOR_EXECUTORS,
     PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
     PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL,
-    THRESHOLD_MAX_HEADROOM_GB,
+    MAX_HEADROOM_GB,
     DIVIDER,
     YARN_ENV,
     YARN_NM_RSRC_MEM_MB,
@@ -317,8 +319,8 @@ def run_calc(position):
     # LLAP_HEADROOM_MEM_MB
     # =IF((E37*0.2) > (12*1024),12*1024,E37*0.2)
     if LLAP_DAEMON_CONTAINER_MEM_MB[position] * PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[position] / 100 \
-            > THRESHOLD_MAX_HEADROOM_GB[position] * KB:
-        LLAP_HEADROOM_MEM_MB[position] = THRESHOLD_MAX_HEADROOM_GB[position] * KB
+            > MAX_HEADROOM_GB[position] * KB:
+        LLAP_HEADROOM_MEM_MB[position] = MAX_HEADROOM_GB[position] * KB
     else:
         LLAP_HEADROOM_MEM_MB[position] = LLAP_DAEMON_CONTAINER_MEM_MB[position] * \
                                           PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM[position] / 100
@@ -328,8 +330,8 @@ def run_calc(position):
                                          (100 - PERCENT_OF_LLAP_FOR_CACHE[position]) / 100
 
     # This ensures that a minimum of 4Gb per Executor is available in the Daemon Heap.
-    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * 4096:
-        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * 4096
+    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MIN_MB_TASK_ALLOCATION[position]:
+        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MIN_MB_TASK_ALLOCATION[position]
 
 
     # LLAP_CACHE_MEM_MB
