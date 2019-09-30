@@ -10,6 +10,7 @@ import readline
 from ambari_configs import api_accessor, get_properties, set_properties
 from cStringIO import StringIO
 import math
+import datetime
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -276,6 +277,10 @@ ENTER_CONTINUE = " <enter> - to continue"
 AMBARI_CFG_CMD = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} {0} --cluster=${{CLUSTER_NAME}}" + \
                     " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={1}" + \
                     " --key={2} --value={3}"
+AMBARI_CFG_CMD_V = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI_PORT}} {0} --cluster=${{CLUSTER_NAME}}" + \
+                 " --credentials-file=${{HOME}}/.ambari-credentials --action=set --config-type={1}" + \
+                 " --key={2} --value={3} --version-note \"{4}\""
+
 
 ERROR_MESSAGES = []
 
@@ -685,11 +690,14 @@ def manualCfgs():
 
     return manual
 
-def ambariRestCalls():
+def ambariRestCalls(version_note):
     ambariConfigs = []
     for cfg in AMBARI_CONFIGS:
         if cfg[POS_SECTION[0]] in VALID_AMBARI_SECTIONS:
-            ambariConfigs.append(AMBARI_CFG_CMD.format(SSL_CMD, cfg[POS_SECTION[0]][1], cfg[POS_CONFIG[0]], cfg[POS_VALUE[0]]))
+            if len(version_note) > 0:
+                ambariConfigs.append(AMBARI_CFG_CMD_V.format(SSL_CMD, cfg[POS_SECTION[0]][1], cfg[POS_CONFIG[0]], cfg[POS_VALUE[0]], version_note))
+            else:
+                ambariConfigs.append(AMBARI_CFG_CMD.format(SSL_CMD, cfg[POS_SECTION[0]][1], cfg[POS_CONFIG[0]], cfg[POS_VALUE[0]]))
 
     return ambariConfigs
 
@@ -702,13 +710,22 @@ def save():
         print (raw_input(ENTER_CONTINUE))
     else:
         out_file_base = raw_input("Enter Filename(without Extension):")
+        t = datetime.datetime.now()
+        version_note = "LLAP Config from CALC: " + t.strftime('%Y-%m-%d %H:%M:%S')
+        note_choice = raw_input("Enter version notes for AMBARI REST Calls: [" + version_note + "]")
+        if len(note_choice) > 0:
+            version_note = note_choice
+
+        # Remove Quotes
+        version_note = version_note.replace("\"","")
+        
         myFile = open(out_file_base + ".sh", "w")
 
         myFile.write("export AMBARI_HOST=<host>\n")
         myFile.write("export AMBARI_PORT=<port>\n")
         myFile.write("export CLUSTER_NAME=<clustername>\n")
 
-        for line in ambariRestCalls():
+        for line in ambariRestCalls(version_note):
             myFile.write(line)
             myFile.write('\n')
 
