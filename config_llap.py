@@ -695,8 +695,10 @@ def ambariRestCalls():
 
 
 def save():
-    if ERROR_MESSAGES > 0:
+    lclErrors = getErrors()
+    if len(lclErrors) > 0:
         environment_status()
+        print ("Fix issues to get script output!")
         print (raw_input(ENTER_CONTINUE))
     else:
         out_file_base = raw_input("Enter Filename(without Extension):")
