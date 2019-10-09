@@ -6,6 +6,7 @@ Memory / Configuration Calculator for Hive LLAP.
 
 | Date | Change | Issues Link |
 | :------ | :----- | :--- |
+| 2019-10-09 | Added Issue/Solution Description for Daemon Sizes over 256Gb | |
 | 2019-09-19 | Added integration with 'working' values on initial collection with ambari integration. Allow mods to LLAP Min Task Allocation.  Ability to control output display columns (see m:mode). Save to File. Initial Error Printouts | [#5](https://github.com/dstreev/hive_llap_calculator/issues/5) [#6](https://github.com/dstreev/hive_llap_calculator/issues/6) [#8](https://github.com/dstreev/hive_llap_calculator/issues/8) [#11](https://github.com/dstreev/hive_llap_calculator/issues/11) [#12](https://github.com/dstreev/hive_llap_calculator/issues/12)|
 | 2019-09-18 | Add Min check for LLAP Daemon Heap.  This value must be no less then 4gb * Number of Executors configured | [#1](https://github.com/dstreev/hive_llap_calculator/issues/1) |
 |2019-09-17 | Changed the method for calculating total memory and resources for LLAP in the Cluster.  We use to use a 'percentage' of the cluster as a starting point for calculating the number of LLAP nodes.  This was a little cryptic.  The new method asks how many 'nodes' you want to run LLAP on.  The assumption now is that LLAP will consume the whole node.  So memory calculations start from the available YARN memory on a node and not a 'percentage' of that memory. | [#2](https://github.com/dstreev/hive_llap_calculator/issues/2) [#4](https://github.com/dstreev/hive_llap_calculator/issues/4) |
