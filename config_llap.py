@@ -12,10 +12,15 @@ from cStringIO import StringIO
 import math
 import datetime
 
+# Version used to display app version.
+# Using Hive Version as the base and "_" as the revision.
+VERSION = "3.1_02"
+
 logger = logging.getLogger('LLAPConfig')
 
 TF = ("true", "false")
 KB = 1024
+GB = 1024^3
 
 # SSL_ON = False
 SSL_CMD = ""
@@ -80,6 +85,8 @@ PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE,
 PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), "","na"]
 MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), "","na"]
 LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None, (), "","na"]
+LLAP_DAEMON_CONTAINER_SAFETY_GB = ["Max LLAP YARN Container Size (GB) before applying 'Safety Valve'", TYPE_REFERENCE, THRESHOLD_ENV, "", 256, None, (), "","na"]
+LLAP_SAFETY_VALVE_MB = ["Unallocated YARN Container Memory (MB) for 'Safety Value'", TYPE_REFERENCE, THRESHOLD_ENV, "", 6192, None, (), "","na"]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
                                                    TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None, (), "","na"]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
@@ -175,6 +182,8 @@ LOGICAL_CONFIGS = [
     PERCENT_OF_HOST_MEM_FOR_YARN,
     # PERCENT_OF_CLUSTER_FOR_LLAP,
     # PERCENT_OF_NODE_FOR_LLAP_MEM,
+    LLAP_DAEMON_CONTAINER_SAFETY_GB,
+    LLAP_SAFETY_VALVE_MB,
     LLAP_MIN_MB_TASK_ALLOCATION,
     PERCENT_OF_LLAP_FOR_CACHE,
     PERCENT_OF_CORES_FOR_EXECUTORS,
@@ -282,7 +291,10 @@ AMBARI_CFG_CMD_V = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI
                  " --key={2} --value={3} --version-note \"{4}\""
 
 
-ERROR_MESSAGES = []
+ISSUE_MESSAGES = []
+WARNING_TYPE = "WARNING"
+RULE_APPLICATION_TYPE = "RULE APPLIED"
+ERROR_TYPE = "ERROR"
 
 cluster = ""
 ambari_accessor_api = None
@@ -357,7 +369,14 @@ def run_calc(position):
     # LLAP_CACHE_MEM_MB
     LLAP_CACHE_MEM_MB[position] = LLAP_DAEMON_CONTAINER_MEM_MB[position] - LLAP_DAEMON_HEAP_MEM_MB[position]
 
-    # LLAP_IO_THREADPOOL
+    # If we've exceeded the Container Threshold, add in a buffer to avoid YARN Killing Containers under load.
+    # LLAP_DAEMON_CONTAINER_SAFETY_GB = ["Max LLAP YARN Container Size before applying 'Safety Valve'", TYPE_REFERENCE, THRESHOLD_ENV, "", 256, None, (), "","na"]
+    # LLAP_SAFETY_VALVE_MB = ["Unallocated YARN Container Memory for grace", TYPE_REFERENCE, THRESHOLD_ENV, "", 6192, None, (), "","na"]
+    if LLAP_DAEMON_CONTAINER_MEM_MB[position] >= LLAP_DAEMON_CONTAINER_SAFETY_GB[position] * KB:
+        if LLAP_CACHE_MEM_MB[position] > LLAP_SAFETY_VALVE_MB[position]:
+            LLAP_CACHE_MEM_MB[position] = LLAP_CACHE_MEM_MB[position] - LLAP_SAFETY_VALVE_MB[position]
+
+            # LLAP_IO_THREADPOOL
     LLAP_IO_THREADPOOL[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * \
                                     PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL[position] / 100
     run_totals_calc(position)
@@ -419,16 +438,33 @@ def calc_deltas():
     LLAP_QUEUE_MIN_REQUIREMENT[POS_DELTA[0]] = LLAP_QUEUE_MIN_REQUIREMENT[POS_VALUE[0]] - LLAP_QUEUE_MIN_REQUIREMENT[POS_CUR_VALUE[0]]
 
 def check_for_issues():
-    del ERROR_MESSAGES[:]
+    del ISSUE_MESSAGES[:]
     if LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]:
-        message = [LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+        message = [ERROR_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                    str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
                    " can't be less than " + LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]),
                    ["Decrease " + LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]], \
                     "Decrease " + LLAP_MIN_MB_TASK_ALLOCATION[POS_SHORT_DESC[0]]]]
-        ERROR_MESSAGES.append(message)
-
+        ISSUE_MESSAGES.append(message)
+    if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]] * GB:
+        message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
+                   " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + "Gb which has implications on memory " + \
+                   "and may cause YARN to prematurely KILL LLAP Daemon containers",
+                   ["In yarn-site.xml, set 'yarn.nodemanager.pmem-check-enabled=false'",
+                    "Apply this only to nodes used to run LLAP daemons",
+                    "Use a Node Label, Queue, and Managed Groups in Ambari to control.",
+                    "Setting is used by the Node Manager"]]
+        ISSUE_MESSAGES.append(message2)
+        message3 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+                    str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
+                    " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + "Gb which has implications on memory " + \
+                    "and may cause YARN to prematurely KILL LLAP Daemon containers",
+                    ["Therefore, we've applied a 'Safety Value' threshold to the total memory footprint of the LLAP daemon.",
+                     str(LLAP_SAFETY_VALVE_MB[POS_VALUE[0]]) + "Mb was subtracted from the cache"
+                     ]]
+        ISSUE_MESSAGES.append(message3)
 
 def get_current(selection, lst):
     for item in lst:
@@ -664,7 +700,7 @@ def ambari_configs():
     print ("===================================")
     print ("  Ambari REST Call Configurations  ")
     print ("===================================")
-    if ERROR_MESSAGES > 0:
+    if ISSUE_MESSAGES > 0:
         environment_status()
     else:
         for line in ambaricalls:
@@ -703,10 +739,15 @@ def ambariRestCalls(version_note):
 
 
 def save():
-    lclErrors = getErrors()
-    if len(lclErrors) > 0:
+    lclErrors = getIssues()
+    hasError = False
+    for message in ISSUE_MESSAGES:
+        if message[0] == ERROR_TYPE:
+            hasError = True
+
+    if hasError:
         environment_status()
-        print ("Fix issues to get script output!")
+        print ("Fix 'ERRORS' to get script output!")
         print (raw_input(ENTER_CONTINUE))
     else:
         out_file_base = raw_input("Enter Filename(without Extension):")
@@ -824,28 +865,30 @@ def change_mode():
         print ("________________________________")
         print ("")
 
-def getErrors():
-    ERRORS = []
-    if len(ERROR_MESSAGES) > 0:
-        ERRORS.append ("********************* ERRORS *********************")
-        for message in ERROR_MESSAGES:
-            ERRORS.append ("Issue: ")
-            ERRORS.append ("\t\t" + message[0])
-            ERRORS.append ("Options:")
-            for opt in message[1]:
-                ERRORS.append ("\t\t" + opt)
-            ERRORS.append("    ------------------------")
-        ERRORS.append ("**************************************************")
-    return ERRORS
+def getIssues():
+    ISSUES = []
+    if len(ISSUE_MESSAGES) > 0:
+        ISSUES.append ("********************* ISSUES *********************")
+        for message in ISSUE_MESSAGES:
+            ISSUES.append ("Type : " + message[0])
+            ISSUES.append ("Issue: ")
+            ISSUES.append ("\t\t" + message[1])
+            ISSUES.append ("Options:")
+            for opt in message[2]:
+                ISSUES.append ("\t\t" + opt)
+            ISSUES.append("    ------------------------")
+        ISSUES.append ("**************************************************")
+    return ISSUES
 
 
 def environment_status():
+    print ("         Calc Version:\t" + VERSION)
     print ("Ambari Integration On:\t("+str(ambari_integration)+")")
     print ("         Current mode:\t*"+str(MODE)+"*")
     print ("      Display Columns:\t" + str(getDisplayColumns()))
-    lclErrors = getErrors()
-    if len(lclErrors) > 0:
-        for line in lclErrors:
+    lclIssues = getIssues()
+    if len(lclIssues) > 0:
+        for line in lclIssues:
             print (line)
 
 def action_loop():

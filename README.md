@@ -6,6 +6,7 @@ Memory / Configuration Calculator for Hive LLAP.
 
 | Date | Change | Issues Link |
 | :------ | :----- | :--- |
+| 2019-10-16 | Added Safety Valve for Daemons over 256Gb. Grace space to help reduce YARN container KILLs | |
 | 2019-10-09 | Added Issue/Solution Description for Daemon Sizes over 256Gb | |
 | 2019-09-19 | Added integration with 'working' values on initial collection with ambari integration. Allow mods to LLAP Min Task Allocation.  Ability to control output display columns (see m:mode). Save to File. Initial Error Printouts | [#5](https://github.com/dstreev/hive_llap_calculator/issues/5) [#6](https://github.com/dstreev/hive_llap_calculator/issues/6) [#8](https://github.com/dstreev/hive_llap_calculator/issues/8) [#11](https://github.com/dstreev/hive_llap_calculator/issues/11) [#12](https://github.com/dstreev/hive_llap_calculator/issues/12)|
 | 2019-09-18 | Add Min check for LLAP Daemon Heap.  This value must be no less then 4gb * Number of Executors configured | [#1](https://github.com/dstreev/hive_llap_calculator/issues/1) |
