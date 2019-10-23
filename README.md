@@ -39,7 +39,7 @@ You'll need to create a few environment variables to support running the Ambari 
 
 Use a 'credentials' file for User/Password information for Ambari.  Create a file in your ${HOME} directory called `.ambari-credentials`
 
-The contents should be 2 lines. First line is the user, second is the password.
+The contents should be 2 lines. First line is the user, second is the password. NOTE: This user should be a 'local' account.  You may have issues with 'remote' accounts and/or SSO accounts.
 ```
 david
 password123
