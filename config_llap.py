@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_02"
+VERSION = "3.1_03"
 
 logger = logging.getLogger('LLAPConfig')
 
