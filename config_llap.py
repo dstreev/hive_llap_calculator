@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_04"
+VERSION = "3.1_05"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -467,14 +467,15 @@ def check_for_issues():
                      str(LLAP_SAFETY_VALVE_MB[POS_VALUE[0]]) + "Mb was subtracted from the cache"
                      ]]
         ISSUE_MESSAGES.append(message3)
-    if (LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) < (LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] * 1.5):
+    if ((LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5) < LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]):
         message4 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                     str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]) + \
-                    " is greater than 150% of " + \
+                    " is greater than 150% of:\n\t\t- " + \
                     LLAP_MIN_MB_TASK_ALLOCATION[POS_SHORT_DESC[0]] + ":[" + \
                     str(LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]]) + "] * " + \
                     LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]] + ":[" + \
-                    str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "]" + \
+                    str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "] (" + \
+                    str((LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" + \
                     ".\n\t\tThis might indicate an imbalance of cores and memory.",
                     ["Consider increasing 'executors' without over extending cores.",
                      "Consider increasing 'cache percentage' to adjust the imbalance.",
