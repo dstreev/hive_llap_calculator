@@ -54,8 +54,8 @@ POS_DELTA = [8, "Delta"]
 ALL_DISPLAY_COLUMNS = [POS_SHORT_DESC,POS_TYPE,POS_SECTION,POS_CONFIG, \
                        POS_VALUE,POS_CUR_VALUE,POS_OPTIONS,POS_LONG_DESC,POS_DELTA]
 
-DISPLAY_COLUMNS = [POS_SHORT_DESC, POS_TYPE, POS_SECTION, POS_CONFIG, \
-                   POS_VALUE, POS_CUR_VALUE]
+DISPLAY_COLUMNS = [POS_SECTION, POS_CONFIG, \
+                   POS_VALUE]
 
 # Sections
 YARN_SITE = ("YARN Configuration", "yarn-site")
@@ -1195,9 +1195,11 @@ def main():
     if ambari_integration:
         ambari_accessor_api = api_accessor(host, user, password, protocol, port, options.unsafe)
         populate_ambari_rest_current()
+        DISPLAY_COLUMNS.append(POS_CUR_VALUE)
 
-    if options.ambari_blueprint:
+    if options.ambari_blueprint and not ambari_integration:
         populate_ambari_bp_current(options.ambari_blueprint)
+        DISPLAY_COLUMNS.append(POS_CUR_VALUE)
         if None in [options.workers, options.memory]:
             logger.info("** Include Worker Count (-w) and Worker Memory (-m) for comprehensive settings when providing a Blueprint (-b)")
             return
