@@ -6,6 +6,7 @@ Memory / Configuration Calculator for Hive LLAP.
 
 | Date | Change | Issues Link |
 | :------ | :----- | :--- |
+| 2019-10-29 | Added Rule to check inbalance of cores and memory | |
 | 2019-10-29 | Added support for pulling current values from Ambari Blueprint | [#3](https://github.com/dstreev/hive_llap_calculator/issues/3) |
 | 2019-10-16 | Added Safety Valve for Daemons over 256Gb. Grace space to help reduce YARN container KILLs | |
 | 2019-10-09 | Added Issue/Solution Description for Daemon Sizes over 256Gb | |

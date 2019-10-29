@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_03"
+VERSION = "3.1_04"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -450,7 +450,8 @@ def check_for_issues():
     if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]] * GB:
         message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                    str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
-                   " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + "Gb which has implications on memory " + \
+                   " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + \
+                    "Gb which has implications on memory " + \
                    "and may cause YARN to prematurely KILL LLAP Daemon containers",
                    ["In yarn-site.xml, set 'yarn.nodemanager.pmem-check-enabled=false'",
                     "Apply this only to nodes used to run LLAP daemons",
@@ -459,12 +460,28 @@ def check_for_issues():
         ISSUE_MESSAGES.append(message2)
         message3 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                     str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
-                    " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + "Gb which has implications on memory " + \
+                    " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + \
+                    "Gb which has implications on memory " + \
                     "and may cause YARN to prematurely KILL LLAP Daemon containers",
                     ["Therefore, we've applied a 'Safety Value' threshold to the total memory footprint of the LLAP daemon.",
                      str(LLAP_SAFETY_VALVE_MB[POS_VALUE[0]]) + "Mb was subtracted from the cache"
                      ]]
         ISSUE_MESSAGES.append(message3)
+    if (LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) < (LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] * 1.5):
+        message4 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]) + \
+                    " is greater than 150% of " + \
+                    LLAP_MIN_MB_TASK_ALLOCATION[POS_SHORT_DESC[0]] + ":[" + \
+                    str(LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]]) + "] * " + \
+                    LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]] + ":[" + \
+                    str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "]" + \
+                    ".\n\t\tThis might indicate an imbalance of cores and memory.",
+                    ["Consider increasing 'executors' without over extending cores.",
+                     "Consider increasing 'cache percentage' to adjust the imbalance.",
+                     "Do nothing, because your queries need a bigger footprint."
+                     ]]
+        ISSUE_MESSAGES.append(message4)
+
 
 def get_current(selection, lst):
     for item in lst:
@@ -1105,18 +1122,11 @@ def main():
     parser.add_option("-t", "--port", dest="port", default="8080", help="Optional port number for Ambari server. Default is '8080'. Provide empty string to not use port.")
     parser.add_option("-s", "--protocol", dest="protocol", default="http", help="Optional support of SSL. Default protocol is 'http'")
     parser.add_option("--unsafe", action="store_true", dest="unsafe", help="Skip SSL certificate verification.")
-    # parser.add_option("-a", "--action", dest="action", help="Script action: <get>, <set>, <delete>")
+
     parser.add_option("-l", "--host", dest="host", help="Server external host name")
     parser.add_option("-n", "--cluster", dest="cluster", help="Name given to cluster. Ex: 'c1'")
-    # parser.add_option("-c", "--config-type", dest="config_type", help="One of the various configuration types in Ambari. Ex: core-site, hdfs-site, mapred-queue-acls, etc.")
+
     parser.add_option("-v", "--version-note", dest="version_note", default="", help="Version change notes which will help to know what has been changed in this config. This value is optional and is used for actions <set> and <delete>.")
-    #
-    # config_options_group = OptionGroup(parser, "To specify property(s) please use \"-f\" OR \"-k\" and \"-v'\"")
-    # config_options_group.add_option("-f", "--file", dest="file", help="File where entire configurations are saved to, or read from. Supported extensions (.xml, .json>)")
-    # config_options_group.add_option("-k", "--key", dest="key", help="Key that has to be set or deleted. Not necessary for 'get' action.")
-    # config_options_group.add_option("-v", "--value", dest="value", help="Optional value to be set. Not necessary for 'get' or 'delete' actions.")
-    # parser.add_option_group(config_options_group)
-    #
 
     parser.add_option("-w", "--workers", dest="workers", help="How many worker nodes in the cluster?")
     parser.add_option("-m", "--memory", dest="memory", help="How much memory does each worker node have (GB)?")
