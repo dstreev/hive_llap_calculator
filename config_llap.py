@@ -960,7 +960,7 @@ def right(field, length):
     return " " * diff + str(field)
 
 
-def populate_current():
+def populate_ambari_rest_current():
     if not ambari_integration:
         return False
 
@@ -971,6 +971,29 @@ def populate_current():
         lclJson = "".join(output)
         section_configs[configs[1]] = json.loads(lclJson)
 
+    populate_current(section_configs)
+
+
+def populate_ambari_bp_current( blueprintFile ):
+    blueprint = json.loads(open (blueprintFile).read())
+    bp_configs = blueprint['configurations']
+    
+    section_configs = {}
+
+    for section in VALID_AMBARI_SECTIONS:
+
+        for config in bp_configs:
+            for key, value in config.items():
+                if key == section[1]:
+                    # print "got properties for: " + key
+                    section_configs[section[1]] = value
+                # else:
+                    # print "next"
+
+    populate_current(section_configs)
+
+
+def populate_current( section_configs ):
     for scKey in section_configs.keys():
         section_config = section_configs[scKey]
 
@@ -978,12 +1001,13 @@ def populate_current():
             for ambariConfig in AMBARI_CONFIGS:
                 if ambariConfig[POS_SECTION[0]][1] == scKey:
                     try:
-                    # set_config(ambariConfig, POS_CUR_VALUE[0])
+                        # set_config(ambariConfig, POS_CUR_VALUE[0])
                         ambariConfig[POS_CUR_VALUE[0]] = convert(section_config['properties'][ambariConfig[POS_CONFIG[0]]], ambariConfig[POS_CUR_VALUE[0]])
                         # Set Calc Values to the same.
                         ambariConfig[POS_VALUE[0]] = convert(section_config['properties'][ambariConfig[POS_CONFIG[0]]], ambariConfig[POS_CUR_VALUE[0]])
-                    except:
-                        print("Skipping property lookup: " + str(ambariConfig[POS_CUR_VALUE[0]]))
+                    except Exception as e:
+                        logger.debug(e)
+                        logger.debug("Skipping property lookup: " + str(ambariConfig[POS_CONFIG[0]]))
 
     if LLAP_NUM_NODES[POS_CUR_VALUE[0]] != LLAP_NUM_NODES_ALT[POS_CUR_VALUE[0]]:
         print ("WARNING: In your current Ambari Configuration, similar legacy configurations are not in Sync.  These need to be in sync!!!!\n\t" +
@@ -1085,7 +1109,7 @@ def main():
     parser.add_option("-l", "--host", dest="host", help="Server external host name")
     parser.add_option("-n", "--cluster", dest="cluster", help="Name given to cluster. Ex: 'c1'")
     # parser.add_option("-c", "--config-type", dest="config_type", help="One of the various configuration types in Ambari. Ex: core-site, hdfs-site, mapred-queue-acls, etc.")
-    parser.add_option("-b", "--version-note", dest="version_note", default="", help="Version change notes which will help to know what has been changed in this config. This value is optional and is used for actions <set> and <delete>.")
+    parser.add_option("-v", "--version-note", dest="version_note", default="", help="Version change notes which will help to know what has been changed in this config. This value is optional and is used for actions <set> and <delete>.")
     #
     # config_options_group = OptionGroup(parser, "To specify property(s) please use \"-f\" OR \"-k\" and \"-v'\"")
     # config_options_group.add_option("-f", "--file", dest="file", help="File where entire configurations are saved to, or read from. Supported extensions (.xml, .json>)")
@@ -1094,8 +1118,10 @@ def main():
     # parser.add_option_group(config_options_group)
     #
 
-    parser.add_option("-w", "--workers", dest="workers", default="10", help="How many worker nodes in the cluster?")
-    parser.add_option("-m", "--memory", dest="memory", default="32", help="How much memory does each worker node have (GB)?")
+    parser.add_option("-w", "--workers", dest="workers", help="How many worker nodes in the cluster?")
+    parser.add_option("-m", "--memory", dest="memory", help="How much memory does each worker node have (GB)?")
+
+    parser.add_option("-b", "--ambari-blueprint", dest="ambari_blueprint", help="Use an Ambari Blueprint to pull configs.")
 
     (options, args) = parser.parse_args()
 
@@ -1168,7 +1194,13 @@ def main():
 
     if ambari_integration:
         ambari_accessor_api = api_accessor(host, user, password, protocol, port, options.unsafe)
-        populate_current()
+        populate_ambari_rest_current()
+
+    if options.ambari_blueprint:
+        populate_ambari_bp_current(options.ambari_blueprint)
+        if None in [options.workers, options.memory]:
+            logger.info("** Include Worker Count (-w) and Worker Memory (-m) for comprehensive settings when providing a Blueprint (-b)")
+            return
 
     # Setup Base defaults
     run_calc(POS_VALUE[0])
