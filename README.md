@@ -63,7 +63,7 @@ Options:
   -l HOST, --host=HOST  Server external host name
   -n CLUSTER, --cluster=CLUSTER
                         Name given to cluster. Ex: 'c1'
-  -b VERSION_NOTE, --version-note=VERSION_NOTE
+  -v VERSION_NOTE, --version-note=VERSION_NOTE
                         Version change notes which will help to know what has
                         been changed in this config. This value is optional
                         and is used for actions <set> and <delete>.
@@ -71,6 +71,8 @@ Options:
                         How many worker nodes in the cluster?
   -m MEMORY, --memory=MEMORY
                         How much memory does each worker node have (GB)?
+  -b AMBARI_BLUEPRINT, --ambari-blueprint=AMBARI_BLUEPRINT
+                        Use an Ambari Blueprint to pull configs.
 
   To specify credentials please use "-e" OR "-u" and "-p'":
     -u USER, --user=USER
