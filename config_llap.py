@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_05"
+VERSION = "3.1_06"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -802,6 +802,17 @@ def save():
             for line in manual:
                 myFile.writelines("Manual Configuration: {0} [{1}]".format(line[POS_SHORT_DESC[0]], line[POS_VALUE[0]]))
                 myFile.write('\n')
+
+        myFile.write("\n")
+        myFile.write("         Calc Version:\t" + VERSION + "\n")
+        myFile.write("Ambari Integration On:\t("+str(ambari_integration)+")\n")
+        myFile.write("         Current mode:\t*"+str(MODE)+"*\n")
+        myFile.write("      Display Columns:\t" + str(getDisplayColumns()) + "\n")
+        myFile.write("\n")
+        lclIssues = getIssues()
+        if len(lclIssues) > 0:
+            for line in lclIssues:
+                myFile.write(line + "\n")
 
         myFile.close()
         print ("")
