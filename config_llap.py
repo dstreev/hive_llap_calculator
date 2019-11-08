@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_06"
+VERSION = "3.1_07"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -84,7 +84,7 @@ PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", T
 PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None, (), "","na"]
 PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), "","na"]
 MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), "","na"]
-LLAP_MIN_MB_TASK_ALLOCATION = ["LLAP Task Min MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None, (), "","na"]
+
 LLAP_DAEMON_CONTAINER_SAFETY_GB = ["Max LLAP YARN Container Size (GB) before applying 'Safety Valve'", TYPE_REFERENCE, THRESHOLD_ENV, "", 256, None, (), "","na"]
 LLAP_SAFETY_VALVE_MB = ["Unallocated YARN Container Memory (MB) for 'Safety Value'", TYPE_REFERENCE, THRESHOLD_ENV, "", 6192, None, (), "","na"]
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
@@ -136,6 +136,10 @@ LLAP_NUM_EXECUTORS_PER_DAEMON = ["Num of Executors", TYPE_CALC, HIVE_INTERACTIVE
 LLAP_IO_THREADPOOL = ["I/O Threadpool", TYPE_CALC, HIVE_INTERACTIVE_SITE,
                       "hive.llap.io.threadpool.size", 12, 12, (), "", 0]
 
+LLAP_MB_PER_INSTANCE = ["LLAP Task MB Allocation", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE, "hive.llap.daemon.memory.per.instance.mb", 4096, 4096, (), "", "The total amount of memory to use for the executors inside LLAP (in megabytes)."]
+
+
+
 # Hive Interactive Size (Custom)
 LLAP_PREWARMED_ENABLED = ["Prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
                           "hive.prewarm.enabled", "false", "false", TF, "", "na"]
@@ -184,7 +188,6 @@ LOGICAL_CONFIGS = [
     # PERCENT_OF_NODE_FOR_LLAP_MEM,
     LLAP_DAEMON_CONTAINER_SAFETY_GB,
     LLAP_SAFETY_VALVE_MB,
-    LLAP_MIN_MB_TASK_ALLOCATION,
     PERCENT_OF_LLAP_FOR_CACHE,
     PERCENT_OF_CORES_FOR_EXECUTORS,
     PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
@@ -204,6 +207,7 @@ LOGICAL_CONFIGS = [
     LLAP_NUM_NODES_ALT,
     LLAP_CONCURRENCY,
     TEZ_AM_MEM_MB,
+    LLAP_MB_PER_INSTANCE,
     LLAP_NUM_EXECUTORS_PER_DAEMON,
     DIVIDER,
     LLAP_AM_DAEMON_HEAP_MB,
@@ -362,8 +366,8 @@ def run_calc(position):
                                          (100 - PERCENT_OF_LLAP_FOR_CACHE[position]) / 100
 
     # This ensures that a minimum of 4Gb per Executor is available in the Daemon Heap.
-    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MIN_MB_TASK_ALLOCATION[position]:
-        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MIN_MB_TASK_ALLOCATION[position]
+    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MB_PER_INSTANCE[position]:
+        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MB_PER_INSTANCE[position]
 
 
     # LLAP_CACHE_MEM_MB
@@ -445,7 +449,7 @@ def check_for_issues():
                    " can't be less than " + LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]),
                    ["Decrease " + LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]], \
-                    "Decrease " + LLAP_MIN_MB_TASK_ALLOCATION[POS_SHORT_DESC[0]]]]
+                    "Decrease " + LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]]]]
         ISSUE_MESSAGES.append(message)
     if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]] * GB:
         message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
@@ -467,15 +471,15 @@ def check_for_issues():
                      str(LLAP_SAFETY_VALVE_MB[POS_VALUE[0]]) + "Mb was subtracted from the cache"
                      ]]
         ISSUE_MESSAGES.append(message3)
-    if ((LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5) < LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]):
+    if ((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5) < LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]):
         message4 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
                     str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]) + \
                     " is greater than 150% of:\n\t\t- " + \
-                    LLAP_MIN_MB_TASK_ALLOCATION[POS_SHORT_DESC[0]] + ":[" + \
-                    str(LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]]) + "] * " + \
+                    LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]] + ":[" + \
+                    str(LLAP_MB_PER_INSTANCE[POS_VALUE[0]]) + "] * " + \
                     LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]] + ":[" + \
                     str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "] (" + \
-                    str((LLAP_MIN_MB_TASK_ALLOCATION[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" + \
+                    str((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" + \
                     ".\n\t\tThis might indicate an imbalance of cores and memory.",
                     ["Consider increasing 'executors' without over extending cores.",
                      "Consider increasing 'cache percentage' to adjust the imbalance.",
