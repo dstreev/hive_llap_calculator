@@ -6,15 +6,15 @@ import logging
 import sys
 import os
 import json
-import readline
-from ambari_configs import api_accessor, get_properties, set_properties
+from ambari_configs import api_accessor, get_properties
+from common import pprinttable, buildtable
 from cStringIO import StringIO
 import math
 import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_07"
+VERSION = "3.1_08"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -51,10 +51,10 @@ POS_OPTIONS = [6,"Options"]
 POS_LONG_DESC = [7,"Long Desc"]
 POS_DELTA = [8, "Delta"]
 
-ALL_DISPLAY_COLUMNS = [POS_SHORT_DESC,POS_TYPE,POS_SECTION,POS_CONFIG, \
+ALL_DISPLAY_COLUMNS = [POS_SHORT_DESC,POS_TYPE,POS_SECTION,POS_CONFIG,
                        POS_VALUE,POS_CUR_VALUE,POS_OPTIONS,POS_LONG_DESC,POS_DELTA]
 
-DISPLAY_COLUMNS = [POS_SECTION, POS_CONFIG, \
+DISPLAY_COLUMNS = [POS_SECTION, POS_CONFIG,
                    POS_VALUE]
 
 # Sections
@@ -82,7 +82,7 @@ PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", T
 # PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_CALC, THRESHOLD_ENV, "", 50, None]
 # PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
 PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None, (), "","na"]
-PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), "","na"]
+PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 100, None, (), "Default assume dedicated use of compute node","na"]
 MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), "","na"]
 
 LLAP_DAEMON_CONTAINER_SAFETY_GB = ["Max LLAP YARN Container Size (GB) before applying 'Safety Valve'", TYPE_REFERENCE, THRESHOLD_ENV, "", 256, None, (), "","na"]
@@ -136,7 +136,7 @@ LLAP_NUM_EXECUTORS_PER_DAEMON = ["Num of Executors", TYPE_CALC, HIVE_INTERACTIVE
 LLAP_IO_THREADPOOL = ["I/O Threadpool", TYPE_CALC, HIVE_INTERACTIVE_SITE,
                       "hive.llap.io.threadpool.size", 12, 12, (), "", 0]
 
-LLAP_MB_PER_INSTANCE = ["LLAP Task MB Allocation", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE, "hive.llap.daemon.memory.per.instance.mb", 4096, 4096, (), "", "The total amount of memory to use for the executors inside LLAP (in megabytes)."]
+LLAP_MB_PER_INSTANCE = ["LLAP Task MB Allocation", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE, "hive.llap.daemon.memory.per.instance.mb", 4096, 4096, (), "The total amount of memory to use for the executors inside LLAP (in megabytes).", 0]
 
 
 
@@ -408,7 +408,7 @@ def run_totals_calc(position):
     TOTAL_MEM_FOOTPRINT[position] = YARN_NM_RSRC_MEM_MB[position] * WORKER_COUNT[position]
 
     # Total LLAP Yarn Queue Requirement (Percent of Root Queue)
-    LLAP_QUEUE_MIN_REQUIREMENT[position] = round(float(TOTAL_LLAP_MEM_FOOTPRINT[position]) / \
+    LLAP_QUEUE_MIN_REQUIREMENT[position] = round(float(TOTAL_LLAP_MEM_FOOTPRINT[position]) /
                                                   TOTAL_MEM_FOOTPRINT[position] * 100, 2)
     calc_deltas()
     check_for_issues()
@@ -444,42 +444,42 @@ def calc_deltas():
 def check_for_issues():
     del ISSUE_MESSAGES[:]
     if LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]:
-        message = [ERROR_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
-                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
-                   " can't be less than " + LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
+        message = [ERROR_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
+                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) +
+                   " can't be less than " + LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" +
                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]),
-                   ["Decrease " + LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]], \
+                   ["Decrease " + LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]],
                     "Decrease " + LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]]]]
         ISSUE_MESSAGES.append(message)
     if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]] * GB:
-        message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
-                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
-                   " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + \
-                    "Gb which has implications on memory " + \
+        message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
+                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) +
+                   " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) +
+                    "Gb which has implications on memory " +
                    "and may cause YARN to prematurely KILL LLAP Daemon containers",
                    ["In yarn-site.xml, set 'yarn.nodemanager.pmem-check-enabled=false'",
                     "Apply this only to nodes used to run LLAP daemons",
                     "Use a Node Label, Queue, and Managed Groups in Ambari to control.",
                     "Setting is used by the Node Manager"]]
         ISSUE_MESSAGES.append(message2)
-        message3 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
-                    str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) + \
-                    " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) + \
-                    "Gb which has implications on memory " + \
+        message3 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
+                    str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) +
+                    " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) +
+                    "Gb which has implications on memory " +
                     "and may cause YARN to prematurely KILL LLAP Daemon containers",
                     ["Therefore, we've applied a 'Safety Value' threshold to the total memory footprint of the LLAP daemon.",
                      str(LLAP_SAFETY_VALVE_MB[POS_VALUE[0]]) + "Mb was subtracted from the cache"
                      ]]
         ISSUE_MESSAGES.append(message3)
     if ((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5) < LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]):
-        message4 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" + \
-                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]) + \
-                    " is greater than 150% of:\n\t\t- " + \
-                    LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]] + ":[" + \
-                    str(LLAP_MB_PER_INSTANCE[POS_VALUE[0]]) + "] * " + \
-                    LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]] + ":[" + \
-                    str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "] (" + \
-                    str((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" + \
+        message4 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" +
+                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]) +
+                    " is greater than 150% of:\n\t\t- " +
+                    LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]] + ":[" +
+                    str(LLAP_MB_PER_INSTANCE[POS_VALUE[0]]) + "] * " +
+                    LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]] + ":[" +
+                    str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "] (" +
+                    str((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" +
                     ".\n\t\tThis might indicate an imbalance of cores and memory.",
                     ["Consider increasing 'executors' without over extending cores.",
                      "Consider increasing 'cache percentage' to adjust the imbalance.",
@@ -792,7 +792,7 @@ def save():
             myFile.write(line)
             myFile.write('\n')
 
-        myFile.close();
+        myFile.close()
 
         myFile = open(out_file_base + ".txt", "w")
 
@@ -978,21 +978,6 @@ def action_loop():
         return True
 
 
-def left(field, length):
-    diff = length - len(str(field))
-    return str(field) + " " * diff
-
-
-def center(field, length):
-    diff = length - len(str(field))
-    return " " * (diff / 2) + str(field) + " " * (length - len(str(field)) - (diff / 2))
-
-
-def right(field, length):
-    diff = length - len(str(field))
-    return " " * diff + str(field)
-
-
 def populate_ambari_rest_current():
     if not ambari_integration:
         return False
@@ -1052,73 +1037,6 @@ def populate_current( section_configs ):
     run_totals_calc(POS_CUR_VALUE[0])
     # Reset the Calc Values based on initial Ambari Values.
     run_calc(POS_VALUE[0])
-
-
-def pprinttable(rows, fields):
-    output = buildtable(rows, fields)
-    for line in output:
-        print line
-
-def buildtable(rows, fields):
-    str_list = []
-
-    if len(rows) > 0:
-        # headers = HEADER._fields
-        # headers = HEADER
-        lens = []
-        for field in fields:
-            lens.append(len(field[1]))
-
-        for row in rows:
-            inc = 0
-            for field in fields:
-                if isinstance(row[field[0]], (int, float, long)):
-                    if lens[inc] < 16:
-                        lens[inc] = 16
-                elif isinstance(row[field[0]], (list, tuple)):
-                    size = 2
-                    for i in range(len(row[field[0]])):
-                        size += len(row[field[0]][i]) + 3
-                    if size > lens[inc]:
-                        lens[inc] = size
-                else:
-                    if row[field[0]] is not None and (len(row[field[0]]) > lens[inc]):
-                        lens[inc] = len(row[field[0]])
-                inc += 1
-
-        headerRowSeparator = ""
-        headerRow = ""
-        for loc in range(len(fields)):
-            headerRowSeparator = headerRowSeparator + "|" + "=" * (lens[loc]+1)
-            headerRow = headerRow + "| " + center([fields[loc][1]], lens[loc])
-
-        headerRowSeparator = headerRowSeparator + "|"
-        headerRow = headerRow + "|"
-
-        str_list.append(headerRowSeparator)
-        # print headerRowSeparator
-        str_list.append(headerRow)
-        # print headerRow
-        str_list.append(headerRowSeparator)
-        # print headerRowSeparator
-
-        for row in rows:
-            inc = 0
-            recordRow = ""
-            for field in fields:
-                if isinstance(row[field[0]], int) or isinstance(row[field[0]], float) or isinstance(row[field[0]], long):
-                    recordRow = recordRow + "| " + right(row[field[0]], lens[inc])
-                else:
-                    recordRow = recordRow + "| " + left(row[field[0]], lens[inc])
-                inc += 1
-            recordRow = recordRow + "|"
-
-            str_list.append(recordRow)
-            # print recordRow
-
-        str_list.append(headerRowSeparator)
-        # print headerRowSeparator
-    return str_list
 
 
 def main():

@@ -6,7 +6,7 @@ Memory / Configuration Calculator for Hive LLAP.
 
 | Date | Change | Issues Link |
 | :------ | :----- | :--- |
-| 2019-11-07 | Change threshold to property for: `hive.llap.daemon.memory.per.instance.mb` | [#14](https://github.com/dstreev/hive_llap_calculator/issues/14) 
+| 2019-11-07 | Change threshold to property for: `hive.llap.daemon.memory.per.instance.mb`. Default Percent for Executors increased to 100 | [#14](https://github.com/dstreev/hive_llap_calculator/issues/14) [#15](https://github.com/dstreev/hive_llap_calculator/issues/15) | 
 | 2019-10-30 | Added Rules to Save Action | |
 | 2019-10-29 | Added Rule to check imbalance of cores and memory | |
 | 2019-10-29 | Added support for pulling current values from Ambari Blueprint | [#3](https://github.com/dstreev/hive_llap_calculator/issues/3) |
