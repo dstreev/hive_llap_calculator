@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_08"
+VERSION = "3.1_10"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -54,7 +54,7 @@ POS_DELTA = [8, "Delta"]
 ALL_DISPLAY_COLUMNS = [POS_SHORT_DESC,POS_TYPE,POS_SECTION,POS_CONFIG,
                        POS_VALUE,POS_CUR_VALUE,POS_OPTIONS,POS_LONG_DESC,POS_DELTA]
 
-DISPLAY_COLUMNS = [POS_SECTION, POS_CONFIG,
+DISPLAY_COLUMNS = [POS_SHORT_DESC, POS_SECTION, POS_CONFIG,
                    POS_VALUE]
 
 # Sections
@@ -72,21 +72,23 @@ SECTIONS = (HOST_ENV, THRESHOLD_ENV, YARN_SITE, HIVE_INTERACTIVE_SITE, HIVE_INTE
 
 # Environment
 WORKER_MEMORY_GB = ["Node Memory Footprint(GB)", TYPE_INPUT, HOST_ENV,
-                    "", 32, 32, (), "", 0]
+                    "", 0, 0, (), "", 0]
 WORKER_COUNT = ["Number of Cluster Worker Nodes", TYPE_INPUT, HOST_ENV,
-                "", 30, 30, (), "", 0]
-WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 4, 4, (), "", 0]
+                "", 0, 0, (), "", 0]
+WORKER_CORES = ["YARN Resource CPU-vCores", TYPE_INPUT, YARN_SITE, "yarn.nodemanager.resource.cpu-vcores", 0, 0, (), "", 0]
 
 # Thresholds
 PERCENT_OF_HOST_MEM_FOR_YARN = ["Percent of Host Memory for YARN NodeManager", TYPE_REFERENCE, THRESHOLD_ENV, "", 80, None, (), "","na"]
 # PERCENT_OF_CLUSTER_FOR_LLAP = ["Percent of Cluster for LLAP", TYPE_CALC, THRESHOLD_ENV, "", 50, None]
 # PERCENT_OF_NODE_FOR_LLAP_MEM = ["Percent of NodeManager Memory for LLAP", TYPE_REFERENCE, THRESHOLD_ENV, "", 90, None]
 PERCENT_OF_LLAP_FOR_CACHE = ["Percent of LLAP Memory for Cache", TYPE_REFERENCE, THRESHOLD_ENV, "", 50, None, (), "","na"]
-PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of Cores for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 100, None, (), "Default assume dedicated use of compute node","na"]
+PERCENT_OF_CORES_FOR_EXECUTORS = ["Percent of 'YARN vCores' for LLAP Executors", TYPE_REFERENCE, THRESHOLD_ENV, "", 100, None, (), "Default assumes dedicated use of compute node","na"]
 MAX_HEADROOM_GB = ["MAX LLAP Headroom Value(GB)", TYPE_REFERENCE, THRESHOLD_ENV, "", 12, None, (), "","na"]
 
 LLAP_DAEMON_CONTAINER_SAFETY_GB = ["Max LLAP YARN Container Size (GB) before applying 'Safety Valve'", TYPE_REFERENCE, THRESHOLD_ENV, "", 256, None, (), "","na"]
 LLAP_SAFETY_VALVE_MB = ["Unallocated YARN Container Memory (MB) for 'Safety Value'", TYPE_REFERENCE, THRESHOLD_ENV, "", 6192, None, (), "","na"]
+LLAP_TASK_MB_PER_INSTANCE_REFERENCE = ["Reference LLAP Task MB Allocation", TYPE_REFERENCE, THRESHOLD_ENV, "", 4096, None, (), "The reference memory amount per Executor Task. (in megabytes).", 0]
+
 PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM = ["Percent of Daemon Container Memory(MB) for Headroom",
                                                    TYPE_REFERENCE, THRESHOLD_ENV, "", 20, None, (), "","na"]
 PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpool", TYPE_REFERENCE,
@@ -94,11 +96,11 @@ PERCENT_OF_EXECUTORS_FOR_IO_THREADPOOL = ["Percent of Executors for IO Threadpoo
 
 # YARN
 YARN_NM_RSRC_MEM_MB = ["Node Manager Memory(MB)", TYPE_CALC, YARN_SITE,
-                       "yarn.nodemanager.resource.memory-mb", 13107, 13107, (), "", 0]
+                       "yarn.nodemanager.resource.memory-mb", 0, 0, (), "", 0]
 YARN_SCH_MAX_ALLOC_MEM_MB = ["Yarn Max Mem Allocation(MB)", TYPE_CALC, YARN_SITE,
-                             "yarn.scheduler.maximum-allocation-mb", 11927, 11927, (), "", 0]
+                             "yarn.scheduler.maximum-allocation-mb", 0, 0, (), "", 0]
 YARN_SCH_MIN_ALLOC_MEM_MB = ["Yarn Min Mem Allocation(MB)", TYPE_REFERENCE, YARN_SITE,
-                             "yarn.scheduler.minimum-allocation-mb", 2048, 2048, (), "", 0]
+                             "yarn.scheduler.minimum-allocation-mb", 1024, 1024, (), "", 0]
 
 DIVIDER = ["", "", "", "", "", "", "", "", ""]
 THRESHOLDS =    [" --  Threshold DETAILS -- ", "", "", "", "", "", "", "", ""]
@@ -111,12 +113,22 @@ TOTALS = ["> Totals", "", "", "", "", "", "", "", ""]
 # Hive Interactive Site
 HIVE_LLAP_QUEUE = ["YARN Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
                    "hive.llap.daemon.queue.name", "llap", "llap", (), "","na"]
+# wip
+# HIVE_LLAP_CONCURRENCY_QUEUE = ["YARN Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
+#                    "hive.server2.tez.default.queues", "llap", "llap", (), "","na"]
+# HIVE_LLAP_CONCURRENCY_QUEUE_ALLOW_CUSTOM = ["Allow Custom Concurrency AM Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
+#                                "hive.server2.tez.sessions.custom.queue.allowed", "false", "false", (), "", "na"]
+# HIVE_LLAP_WORKLOAD_MANAGER_QUEUE = ["LLAP Workload Management Queue", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
+#                    "hive.server2.tez.interactive.queue", "", "", (), "When defined, concurrency determined by Workload Management Parallelism", "na"]
+
 TEZ_CONTAINER_SIZE_MB = ["TEZ Container Size", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
                          "hive.tez.container.size", KB * 4, KB * 4, (), "Tez container size when LLAP is run with hive.execution.mode=container, which launches container instances for the job.",0]
+
 LLAP_DAEMON_CONTAINER_MEM_MB = ["Daemon Memory(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                                "hive.llap.daemon.yarn.container.mb", 11796, 11796, (), "", 0]
+                                "hive.llap.daemon.yarn.container.mb", 0, 0, (), "", 0]
+
 LLAP_CACHE_MEM_MB = ["Cache(MB)", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                     "hive.llap.io.memory.size", KB * 4, KB * 4, (), "", 0]
+                     "hive.llap.io.memory.size", 0, 0, (), "(LLAP Cache) Maximum size for IO allocator or ORC low-level cache.", 0]
 LLAP_OBJECT_CACHE_ENABLED = ["Object Cache Enabled?", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
                              "hive.llap.object.cache.enabled", "true", "true",
                              TF, "Cache objects (plans, hashtables, etc) in LLAP","na"]
@@ -131,34 +143,31 @@ LLAP_IO_ALLOCATOR_NMAP_PATH = ["Direct I/O cache path", TYPE_REFERENCE, HIVE_INT
                                "hive.llap.io.allocator.mmap.path", "", "", (), "","na"]
 
 LLAP_NUM_EXECUTORS_PER_DAEMON = ["Num of Executors", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                                 "hive.llap.daemon.num.executors", 12, 12, (), "",0]
+                                 "hive.llap.daemon.num.executors", 0, 0, (), "",0]
 
 LLAP_IO_THREADPOOL = ["I/O Threadpool", TYPE_CALC, HIVE_INTERACTIVE_SITE,
-                      "hive.llap.io.threadpool.size", 12, 12, (), "", 0]
-
-LLAP_MB_PER_INSTANCE = ["LLAP Task MB Allocation", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE, "hive.llap.daemon.memory.per.instance.mb", 4096, 4096, (), "The total amount of memory to use for the executors inside LLAP (in megabytes).", 0]
-
+                      "hive.llap.io.threadpool.size", 0, 0, (), "", 0]
 
 
 # Hive Interactive Size (Custom)
 LLAP_PREWARMED_ENABLED = ["Prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
                           "hive.prewarm.enabled", "false", "false", TF, "", "na"]
 LLAP_PREWARM_NUM_CONTAINERS = ["Number of prewarmed Containers", TYPE_REFERENCE, HIVE_INTERACTIVE_SITE,
-                               "hive.prewarm.numcontainers", 1, 0, (), "", 1]
+                               "hive.prewarm.numcontainers", 0, 0, (), "", 1]
 
 # Hive Interactive Env
 LLAP_NUM_NODES = ["Daemon Count", TYPE_INPUT, HIVE_INTERACTIVE_ENV,
-                  "num_llap_nodes", 1, 1, (), "", 0]
+                  "num_llap_nodes", 0, 0, (), "", 0]
 LLAP_NUM_NODES_ALT = ["Daemon Count(legacy)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                  "num_llap_nodes_for_llap_daemons", 1, 1, (), "", 0]
+                  "num_llap_nodes_for_llap_daemons", 0, 0, (), "", 0]
 LLAP_CONCURRENCY = ["Query Concurrency", TYPE_INPUT, HIVE_INTERACTIVE_SITE,
-                    "hive.server2.tez.sessions.per.default.queue", 2, 2, (), "", 0]
+                    "hive.server2.tez.sessions.per.default.queue", 0, 0, (), "", 0]
 LLAP_AM_DAEMON_HEAP_MB = ["AM Heap for Daemons", TYPE_REFERENCE, HIVE_INTERACTIVE_ENV,
-                          "hive_heapsize", 4096, 4096, (), "Could be 2048, but defaults to 4096 in Ambari", 0]
+                          "hive_heapsize", 4096, 0, (), "Could be 2048, but defaults to 4096 in Ambari", 0]
 LLAP_HEADROOM_MEM_MB = ["Heap Headroom", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                        "llap_headroom_space", 2048, 2048, (), "", 0]
+                        "llap_headroom_space", 0, 0, (), "", 0]
 LLAP_DAEMON_HEAP_MEM_MB = ["Daemon Heap size(MB)", TYPE_CALC, HIVE_INTERACTIVE_ENV,
-                           "llap_heap_size", 8192, 8192, (), "", 0]
+                           "llap_heap_size", 0, 0, (), "", 0]
 
 # TEZ Interactive site
 TEZ_AM_MEM_MB = ["TEZ AM Container size(MB) DAG Submission", TYPE_REFERENCE, TEZ_INTERACTIVE_SITE,
@@ -188,6 +197,7 @@ LOGICAL_CONFIGS = [
     # PERCENT_OF_NODE_FOR_LLAP_MEM,
     LLAP_DAEMON_CONTAINER_SAFETY_GB,
     LLAP_SAFETY_VALVE_MB,
+    LLAP_TASK_MB_PER_INSTANCE_REFERENCE,
     PERCENT_OF_LLAP_FOR_CACHE,
     PERCENT_OF_CORES_FOR_EXECUTORS,
     PERCENT_OF_DAEMON_CONTAINER_MEM_MB_FOR_HEADROOM,
@@ -207,7 +217,6 @@ LOGICAL_CONFIGS = [
     LLAP_NUM_NODES_ALT,
     LLAP_CONCURRENCY,
     TEZ_AM_MEM_MB,
-    LLAP_MB_PER_INSTANCE,
     LLAP_NUM_EXECUTORS_PER_DAEMON,
     DIVIDER,
     LLAP_AM_DAEMON_HEAP_MB,
@@ -304,6 +313,7 @@ cluster = ""
 ambari_accessor_api = None
 version_note = ""
 ambari_integration = True
+current_values = True
 
 MODE = [TYPE_INPUT]
 
@@ -320,8 +330,26 @@ class Capturing(list):
         sys.stdout = self._stdout
 
 
+def calc_prerequisite():
+    if WORKER_CORES[POS_VALUE[0]] < 1:
+        return False
+    if WORKER_COUNT[POS_VALUE[0]] < 1:
+        return False
+    if WORKER_MEMORY_GB[POS_VALUE[0]] < 1:
+        return False
+    if LLAP_NUM_NODES[POS_VALUE[0]] < 1:
+        return False
+    if LLAP_CONCURRENCY[POS_VALUE[0]] < 1:
+        return False
+
+    return True
+
+
 def run_calc(position):
     # print ("running calc")
+    if not calc_prerequisite():
+        check_for_issues()
+        return
 
     ## YARN
     #########
@@ -366,8 +394,8 @@ def run_calc(position):
                                          (100 - PERCENT_OF_LLAP_FOR_CACHE[position]) / 100
 
     # This ensures that a minimum of 4Gb per Executor is available in the Daemon Heap.
-    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MB_PER_INSTANCE[position]:
-        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_MB_PER_INSTANCE[position]
+    if LLAP_DAEMON_HEAP_MEM_MB[position] < LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_TASK_MB_PER_INSTANCE_REFERENCE[position]:
+        LLAP_DAEMON_HEAP_MEM_MB[position] = LLAP_NUM_EXECUTORS_PER_DAEMON[position] * LLAP_TASK_MB_PER_INSTANCE_REFERENCE[position]
 
 
     # LLAP_CACHE_MEM_MB
@@ -443,13 +471,34 @@ def calc_deltas():
 
 def check_for_issues():
     del ISSUE_MESSAGES[:]
+    if WORKER_CORES[POS_VALUE[0]] < 1:
+        messageW = [ERROR_TYPE, WORKER_CORES[POS_SHORT_DESC[0]] + " hasn't been set.",
+                    ["Set workers cores to run calculator."]]
+        ISSUE_MESSAGES.append(messageW)
+    if WORKER_COUNT[POS_VALUE[0]] < 1:
+        messageC = [ERROR_TYPE, WORKER_COUNT[POS_SHORT_DESC[0]] + " hasn't been set.",
+                    ["Set workers count to run calculator."]]
+        ISSUE_MESSAGES.append(messageC)
+    if WORKER_MEMORY_GB[POS_VALUE[0]] < 1:
+        messageM = [ERROR_TYPE, WORKER_MEMORY_GB[POS_SHORT_DESC[0]] + " hasn't been set.",
+                    ["Set workers memory to run calculator."]]
+        ISSUE_MESSAGES.append(messageM)
+    if LLAP_NUM_NODES[POS_VALUE[0]] < 1:
+        messageLN = [ERROR_TYPE, LLAP_NUM_NODES[POS_SHORT_DESC[0]] + " hasn't been set.",
+                    ["Set num of LLAP Nodes to run calculator."]]
+        ISSUE_MESSAGES.append(messageLN)
+    if LLAP_CONCURRENCY[POS_VALUE[0]] < 1:
+        messageLC = [ERROR_TYPE, LLAP_CONCURRENCY[POS_SHORT_DESC[0]] + " hasn't been set.",
+                    ["Set concurrency to run calculator."]]
+        ISSUE_MESSAGES.append(messageLC)
+
     if LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]:
         message = [ERROR_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
                    str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) +
                    " can't be less than " + LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" +
                    str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]),
                    ["Decrease " + LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]],
-                    "Decrease " + LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]]]]
+                    "Decrease " + LLAP_TASK_MB_PER_INSTANCE_REFERENCE[POS_SHORT_DESC[0]]]]
         ISSUE_MESSAGES.append(message)
     if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]] * GB:
         message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
@@ -471,15 +520,15 @@ def check_for_issues():
                      str(LLAP_SAFETY_VALVE_MB[POS_VALUE[0]]) + "Mb was subtracted from the cache"
                      ]]
         ISSUE_MESSAGES.append(message3)
-    if ((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5) < LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]):
+    if ((LLAP_TASK_MB_PER_INSTANCE_REFERENCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5) < LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]):
         message4 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_HEAP_MEM_MB[POS_SHORT_DESC[0]] + ":" +
                     str(LLAP_DAEMON_HEAP_MEM_MB[POS_VALUE[0]]) +
                     " is greater than 150% of:\n\t\t- " +
-                    LLAP_MB_PER_INSTANCE[POS_SHORT_DESC[0]] + ":[" +
-                    str(LLAP_MB_PER_INSTANCE[POS_VALUE[0]]) + "] * " +
+                    LLAP_TASK_MB_PER_INSTANCE_REFERENCE[POS_SHORT_DESC[0]] + ":[" +
+                    str(LLAP_TASK_MB_PER_INSTANCE_REFERENCE[POS_VALUE[0]]) + "] * " +
                     LLAP_NUM_EXECUTORS_PER_DAEMON[POS_SHORT_DESC[0]] + ":[" +
                     str(LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]]) + "] (" +
-                    str((LLAP_MB_PER_INSTANCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" +
+                    str((LLAP_TASK_MB_PER_INSTANCE_REFERENCE[POS_VALUE[0]] * LLAP_NUM_EXECUTORS_PER_DAEMON[POS_VALUE[0]] * 1.5)) + ")" +
                     ".\n\t\tThis might indicate an imbalance of cores and memory.",
                     ["Consider increasing 'executors' without over extending cores.",
                      "Consider increasing 'cache percentage' to adjust the imbalance.",
@@ -774,7 +823,7 @@ def save():
     else:
         out_file_base = raw_input("Enter Filename(without Extension):")
         t = datetime.datetime.now()
-        version_note = "LLAP Config from CALC: " + t.strftime('%Y-%m-%d %H:%M:%S')
+        version_note = "LLAP Config from CALC v." + VERSION + " : " + t.strftime('%Y-%m-%d %H:%M:%S')
         note_choice = raw_input("Enter version notes for AMBARI REST Calls: [" + version_note + "]")
         if len(note_choice) > 0:
             version_note = note_choice
@@ -874,6 +923,8 @@ def change_mode():
                 if TYPE_REFERENCE not in MODE:
                     MODE.append(TYPE_REFERENCE)
         elif selection is not None and selection in (3,4,5,6,7,8,9,10,11):
+            if (selection == 8 or selection == 11) and current_values == False:
+                break
             selectionadjusted = selection - 3
             for i in ALL_DISPLAY_COLUMNS:
                 if i[0] == selectionadjusted:
@@ -917,6 +968,7 @@ def getIssues():
 def environment_status():
     print ("         Calc Version:\t" + VERSION)
     print ("Ambari Integration On:\t("+str(ambari_integration)+")")
+    print ("    Current Values On:\t("+str(current_values)+")")
     print ("         Current mode:\t*"+str(MODE)+"*")
     print ("      Display Columns:\t" + str(getDisplayColumns()))
     lclIssues = getIssues()
@@ -1041,6 +1093,7 @@ def populate_current( section_configs ):
 
 def main():
     global ambari_integration
+    global current_values
     global cluster
     global version_note
     global ambari_accessor_api
@@ -1127,6 +1180,7 @@ def main():
     #options without default value
     if None in [options.host, options.cluster]:
         ambari_integration = False
+        current_values = False
         logger.info("Ambari Integration information missing.  Running in standalone mode.")
         # parser.error("One of required options is not passed")
 
@@ -1142,11 +1196,15 @@ def main():
         DISPLAY_COLUMNS.append(POS_CUR_VALUE)
 
     if options.ambari_blueprint and not ambari_integration:
+        current_values = True
         populate_ambari_bp_current(options.ambari_blueprint)
         DISPLAY_COLUMNS.append(POS_CUR_VALUE)
         if None in [options.workers, options.memory]:
             logger.info("** Include Worker Count (-w) and Worker Memory (-m) for comprehensive settings when providing a Blueprint (-b)")
             return
+
+    if not current_values:
+        guided_loop()
 
     # Setup Base defaults
     run_calc(POS_VALUE[0])
