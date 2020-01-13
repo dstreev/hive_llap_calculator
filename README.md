@@ -6,6 +6,7 @@ Memory / Configuration Calculator for Hive LLAP.
 
 | Date | Change | Issues Link |
 | :------ | :----- | :--- |
+| 2019-11-21 | Added ability to define separate Concurrency Queue | [#17](https://github.com/dstreev/hive_llap_calculator/issues/17) |
 | 2019-11-15 | Displays, defaults and auto guide. Reverted Issue #14 after more research | [#16](https://github.com/dstreev/hive_llap_calculator/issues/16) |
 | 2019-11-07 | Change threshold to property for: `hive.llap.daemon.memory.per.instance.mb`. Default Percent for Executors increased to 100 | [#14](https://github.com/dstreev/hive_llap_calculator/issues/14) [#15](https://github.com/dstreev/hive_llap_calculator/issues/15) | 
 | 2019-10-30 | Added Rules to Save Action | |

@@ -28,17 +28,30 @@ def is_component( item, componentName ):
     return False
 
 
-def report( layoutFile ):
-    layout = json.loads(open (layoutFile).read())
+def get_info(layoutFile):
+    layout = json.loads(open(layoutFile).read())
     items = layout['items']
 
-    hosttable = gen_hosttable( items )
+    hosttable, compute_count, other_count = gen_hosttable( items )
 
-    rpt_hosttable( hosttable )
-    rpt_totals( hosttable )
+    return hosttable, compute_count, other_count
+
+
+def report(layoutFile):
+    layout = json.loads(open(layoutFile).read())
+    items = layout['items']
+
+    hosttable, compute_count, other_count = gen_hosttable( items )
+
+    rpt_hosttable(hosttable)
+    rpt_count_type('Compute', compute_count)
+    rpt_count_type('Other', other_count)
+    rpt_totals(hosttable)
 
 def gen_hosttable( items ):
     records = []
+    compute_count = {}
+    other_count = {}
 
     for item in items:
         record = []
@@ -52,13 +65,38 @@ def gen_hosttable( items ):
         record.append(is_component(item, "DATANODE"))
         record.append(is_component(item, "NODEMANAGER"))
         records.append(record)
+        compute = is_component(item, "NODEMANAGER")
+        key = str(compute) + str(record[3]) + str(record[1])
+        memory = record[3]
+        cores = record[1]
+        if compute and key not in compute_count:
+            compute_count[key] = {'count': 1, 'memory': memory, 'cores': cores, }
+        elif compute:
+            compute_count[key]['count'] += 1
+        elif not compute and key not in other_count:
+            other_count[key] = {'count': 1, 'memory': memory, 'cores': cores, }
+        elif not compute:
+            other_count[key]['count'] += 1
 
-    return records
+        # print key + str(memory) + str(cores)
+
+    return records, compute_count, other_count
 
 def rpt_hosttable ( hosttable ):
         # master = datanode & compute
-    fields = [[0,"Host"], [1,"CPU Count"], [2,"OS"], [3,"Memory"], [4,"Rack"], [5,"Data Node"], [6,"Compute Node"]]
+    fields = [[0, 'Host'], [1, 'CPU Count'], [2, 'OS'], [3, 'Memory'], [4, 'Rack'], [5, 'Data Node'], [6, 'Compute Node']]
     pprinttable(hosttable, fields)
+
+def rpt_count_type ( type, count_type ):
+    # master = datanode & compute
+    print type
+    fields = [[0, 'Count'], [1, 'Memory'], [2, 'Cores']]
+    count_type_rows = []
+    for key in count_type:
+        count_type_record = [count_type[key]['count'], count_type[key]['memory'], count_type[key]['cores']]
+        count_type_rows.append(count_type_record)
+
+    pprinttable(count_type_rows, fields)
 
 
 def rpt_totals ( hosttable ):
