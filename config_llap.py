@@ -14,7 +14,7 @@ import datetime
 
 # Version used to display app version.
 # Using Hive Version as the base and "_" as the revision.
-VERSION = "3.1_10"
+VERSION = "3.1_11"
 
 logger = logging.getLogger('LLAPConfig')
 
@@ -305,6 +305,7 @@ AMBARI_CFG_CMD_V = "./ambari_configs.py --host=${{AMBARI_HOST}} --port=${{AMBARI
 
 
 ISSUE_MESSAGES = []
+RECOMMENDATION_TYPE = "RECOMMENDATION"
 WARNING_TYPE = "WARNING"
 RULE_APPLICATION_TYPE = "RULE APPLIED"
 ERROR_TYPE = "ERROR"
@@ -471,6 +472,16 @@ def calc_deltas():
 
 def check_for_issues():
     del ISSUE_MESSAGES[:]
+    message2 = [RECOMMENDATION_TYPE,
+                "LLAP will flex above YARN container boundaries for a very short time " +
+                "under highload/join scenarios and may cause YARN to " +
+                "prematurely KILL LLAP Daemon containers.",
+                ["In yarn-site.xml, set 'yarn.nodemanager.pmem-check-enabled=false'",
+                 "Apply this only to nodes used to run LLAP daemons",
+                 "Use a Node Label, Queue, and Managed Groups in Ambari to control.",
+                 "Setting is used by the Node Manager"]]
+    ISSUE_MESSAGES.append(message2)
+
     if WORKER_CORES[POS_VALUE[0]] < 1:
         messageW = [ERROR_TYPE, WORKER_CORES[POS_SHORT_DESC[0]] + " hasn't been set.",
                     ["Set workers cores to run calculator."]]
@@ -501,16 +512,6 @@ def check_for_issues():
                     "Decrease " + LLAP_TASK_MB_PER_INSTANCE_REFERENCE[POS_SHORT_DESC[0]]]]
         ISSUE_MESSAGES.append(message)
     if LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]] > LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]] * GB:
-        message2 = [WARNING_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
-                   str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) +
-                   " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) +
-                    "Gb which has implications on memory " +
-                   "and may cause YARN to prematurely KILL LLAP Daemon containers",
-                   ["In yarn-site.xml, set 'yarn.nodemanager.pmem-check-enabled=false'",
-                    "Apply this only to nodes used to run LLAP daemons",
-                    "Use a Node Label, Queue, and Managed Groups in Ambari to control.",
-                    "Setting is used by the Node Manager"]]
-        ISSUE_MESSAGES.append(message2)
         message3 = [RULE_APPLICATION_TYPE, LLAP_DAEMON_CONTAINER_MEM_MB[POS_SHORT_DESC[0]] + ":" +
                     str(LLAP_DAEMON_CONTAINER_MEM_MB[POS_VALUE[0]]) +
                     " is greater than " + str(LLAP_DAEMON_CONTAINER_SAFETY_GB[POS_VALUE[0]]) +
@@ -846,7 +847,7 @@ def save():
         myFile = open(out_file_base + ".txt", "w")
 
         # myFile.writelines(buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS))
-        for line in buildtable(AMBARI_CONFIGS, DISPLAY_COLUMNS):
+        for line in buildtable(LOGICAL_CONFIGS, DISPLAY_COLUMNS):
             myFile.write(line)
             myFile.write('\n')
 

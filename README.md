@@ -6,6 +6,7 @@ Memory / Configuration Calculator for Hive LLAP.
 
 | Date | Change | Issues Link |
 | :------ | :----- | :--- |
+| 2020-07-17 | Moved up 'pmem' check to recommendation for all configs. | [#19](https://github.com/dstreev/hive_llap_calculator/issues/19) |
 | 2019-11-21 | Added ability to define separate Concurrency Queue | [#17](https://github.com/dstreev/hive_llap_calculator/issues/17) |
 | 2019-11-15 | Displays, defaults and auto guide. Reverted Issue #14 after more research | [#16](https://github.com/dstreev/hive_llap_calculator/issues/16) |
 | 2019-11-07 | Change threshold to property for: `hive.llap.daemon.memory.per.instance.mb`. Default Percent for Executors increased to 100 | [#14](https://github.com/dstreev/hive_llap_calculator/issues/14) [#15](https://github.com/dstreev/hive_llap_calculator/issues/15) | 
@@ -25,6 +26,10 @@ Memory / Configuration Calculator for Hive LLAP.
     - CentOS 7 bash
 - Python 2.7+
 - Calculator for Hive 3+ LLAP (HDP 3+) (May work for Hive 2 LLAP, but not tested)
+
+## Limitations
+
+This tool does NOT support 'heterogenous' environment calculations.  Calculations are based on a 'homogenous' compute configuration.  If you have a 'heterogenous' compute environment, limit the calculations to a subset of 'heterogenous' nodes where LLAP daemons will run.  In this scenario, the calculations for Queue sizes and overall footprint percentages will NOT be accurate.  Please use the numbers provided as a base to calculate those values for the full cluster.
 
 ## Directions
 
